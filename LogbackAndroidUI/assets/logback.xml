@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!--
+   By default encoders are assigned the type
+     ch.qos.logback.classic.encoder.PatternLayoutEncoder
+   see http://logback.qos.ch/manual/layouts.html
+ -->
+<configuration>
+
+  <property name="LOG_DIR" value="/mnt/sdcard" />
+
+  <appender name="LOGCAT" class="ch.qos.logback.classic.android.LogcatAppender">
+    <checkLoggable>false</checkLoggable>
+    <tagEncoder>
+       <pattern>ammo.%logger{22}</pattern>
+    </tagEncoder>
+    <encoder>
+       <pattern>[%method] %msg%n</pattern>
+    </encoder>
+  </appender>
+  
+  <appender name="STATS" class="ch.qos.logback.core.FileAppender">
+    <file>${LOG_DIR}/ammo-perf.log</file>
+    <append>true</append>
+    <encoder>
+      <!-- <pattern>%-4relative [%thread] %-5level %logger{35} - %msg%n</pattern>   -->
+      <!--  output: elapsed time , logger name  and message -->
+      <pattern>%.-1level %10relative %-20logger{35} - %msg%n</pattern>
+    </encoder>
+  </appender>
+  
+  <!--
+  <logger name="queue.request.out" level="TRACE">
+       <appender-ref ref="STATS" />
+  </logger>
+  -->
+
+
+
+  <root level="WARN">
+    <appender-ref ref="LOGCAT" />
+  </root>
+
+</configuration>

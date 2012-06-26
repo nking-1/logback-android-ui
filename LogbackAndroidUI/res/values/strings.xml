@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    
+    <string name="app_name">LogbackAndroidUI</string>
+    <string name="log_viewer_dialog_desc">Logs can be viewed from Logcat, or you can select an Appender that is writing to a file to read its logs.</string>
+
+</resources>

@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical" >
+
+    <TextView
+        android:id="@+id/textView1"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/log_viewer_dialog_desc" />
+
+    <View
+        style="@style/log_viewer_dialog_spacer" />
+
+    <Button
+        android:id="@+id/log_viewer_dialog_logcat_button"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="View Logcat" />
+    
+    <View
+        style="@style/log_viewer_dialog_spacer" />
+
+    <TextView
+        android:id="@+id/textView2"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Available file appenders:" />
+
+</LinearLayout>

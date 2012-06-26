@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical">
+    
+    <ListView 
+        android:id="@android:id/list"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        />
+ 
+    <TextView
+        android:id="@+id/selection_text"
+        android:background="@color/grey05"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"/>
+    
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+	    <view
+	        class="edu.vu.isis.logger.ui.WellBehavedSpinner"
+	        android:id="@+id/level_spinner"
+	        android:layout_width="0dp"
+	        android:layout_height="wrap_content"
+	        android:layout_weight="50"
+	        android:prompt="@string/level_prompt"/>
+	    <Button
+	        android:id="@+id/appender_button"
+	        android:layout_width="0dp"
+	        android:layout_height="wrap_content"
+	        android:text="Configure appenders"
+	        android:onClick="configureAppenders"
+	        android:layout_weight="50" />
+	</LinearLayout> 
+    
+</LinearLayout>

@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="level_prompt">Select a level</string>
+    
+     <string name="logger_icon_desc">icon indicating the type of logger</string>
+    
+    <string-array name="level_options">
+        <item>Trace</item>
+        <item>Debug</item>
+        <item>Info</item>
+        <item>Warn</item>
+        <item>Error</item>
+        <item>Off</item>
+        <item>Clear</item>
+    </string-array>
+    
+    <color name="actual_level">#ff0012</color>
+    <color name="effective_level">#ffffff</color>
+    
+    <color name="selected_logger_bg">#3F4857</color>
+    <color name="unselected_logger_bg">#000000</color>
+    <color name="pressing_logger">#ffffff</color>
+    
+    <style name="selected_logger_font">
+        <item name="android:textStyle">bold|italic</item>
+        <item name="android:textColor">#FFFFFF</item>
+    </style>
+    
+    <style name="unselected_logger_font">
+        <item name="android:textStyle">normal</item>
+        <item name="android:textColor">#C0C0C0</item>
+    </style>
+    
+    
+    
+</resources>
