@@ -5,7 +5,6 @@
     android:orientation="vertical" >
 
     <TextView
-        android:id="@+id/textView1"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="@string/log_viewer_dialog_desc" />
@@ -23,9 +22,14 @@
         style="@style/log_viewer_dialog_spacer" />
 
     <TextView
-        android:id="@+id/textView2"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Available file appenders:" />
+    
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:id="@+id/log_viewer_dialog_file_appender_ll"
+        android:orientation="vertical" />
 
 </LinearLayout>

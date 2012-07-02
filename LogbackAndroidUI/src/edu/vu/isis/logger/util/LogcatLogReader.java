@@ -9,6 +9,9 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.util.regex.PatternSyntaxException;
 
 import edu.vu.isis.logger.ui.LogcatLogViewer;
 
@@ -23,17 +26,18 @@ public class LogcatLogReader extends LogReader {
 	
 	private final BufferedReader mReader;
 	private final ArrayList<LogElement> mLogCache = new ArrayList<LogElement>();
-	private String mRegex;
-	
-	private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
-	
-	public LogcatLogReader(Context context, Handler handler, String regex) throws IOException {
+	private Pattern mPattern;
+
+	private final ScheduledExecutorService scheduler = Executors
+			.newSingleThreadScheduledExecutor();
+
+	public LogcatLogReader(Context context, Handler handler, String regex)
+			throws IOException {
 
 		this.mContext = context;
 		this.mHandler = handler;
 		setRegex(regex);
 		String command = "logcat";
-		if(!regex.equals(""))  command += " | grep " + regex;
 		final Process logcatProcess = Runtime.getRuntime().exec(command);
 		this.mReader = new BufferedReader(new InputStreamReader(
 				logcatProcess.getInputStream()), BUFFER_SIZE);
@@ -153,7 +157,12 @@ public class LogcatLogReader extends LogReader {
 	
 	
 	public void setRegex(String newRegex) {
-		mRegex = newRegex;
+		try {
+			mPattern = Pattern.compile(newRegex);
+		} catch (PatternSyntaxException pe) {
+			mPattern = Pattern.compile("");
+			mHandler.sendEmptyMessage(LogcatLogViewer.NOTIFY_INVALID_REGEX_MSG);
+		}
 	}
 	
 	
@@ -163,20 +172,19 @@ public class LogcatLogReader extends LogReader {
 	
 	private class ReadThread extends Thread {
 
-		private LogcatLogReader parent = LogcatLogReader.this;
-
 		@Override
 		public void run() {
 
 			while (!Thread.currentThread().isInterrupted()) {
-				if (parent.isReading.get()) {
+				if (isReading.get()) {
 					try {
-
-						String nextLine = parent.mReader.readLine();
+						String nextLine = mReader.readLine();
+						Matcher matcher = mPattern.matcher(nextLine);
+						if (!matcher.find())
+							continue;
 						final LogLevel level = getCorrespondingLevel(nextLine);
-						synchronized (parent.mLogCache) {
-							parent.mLogCache
-									.add(new LogElement(level, nextLine));
+						synchronized (mLogCache) {
+							mLogCache.add(new LogElement(level, nextLine));
 						}
 
 					} catch (IOException e) {
@@ -199,11 +207,11 @@ public class LogcatLogReader extends LogReader {
 		
 		@Override
 		public void run() {
-			
-				if(!parent.isPaused.get()) {
-					parent.sendCacheAndClear();
-				}
-			
+
+			if (!parent.isPaused.get()) {
+				parent.sendCacheAndClear();
+			}
+
 		}
 		
 	};

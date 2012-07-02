@@ -16,7 +16,7 @@
             android:title="Regular expression"
             android:summary="Regular expression to match against incoming logs"
             android:dialogTitle="Regular expression"
-            android:dialogMessage="Enter a POSIX regular expression"
+            android:dialogMessage="Enter a Java regular expression"
             android:defaultValue="" />
     </PreferenceCategory>
 

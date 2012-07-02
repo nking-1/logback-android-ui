@@ -32,6 +32,7 @@ import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.Spinner;
 import android.widget.TextView;
@@ -477,7 +478,35 @@ public class LoggerEditor extends ListActivity {
 				dialog.dismiss();
 			}
 		});
-		
+
+		LinearLayout ll = (LinearLayout) dialog
+				.findViewById(R.id.log_viewer_dialog_file_appender_ll);
+		for (final Appender<ILoggingEvent> a : availableAppenders) {
+			if (!(a instanceof FileAppender))
+				continue;
+			Button button = new Button(this);
+			button.setWidth(ViewGroup.LayoutParams.MATCH_PARENT);
+			button.setHeight(ViewGroup.LayoutParams.WRAP_CONTENT);
+			button.setText(a.getName());
+			button.setOnClickListener(new View.OnClickListener() {
+				@Override
+				public void onClick(View v) {
+					
+					//TODO: Remove this toast once file reading works
+					Toast.makeText(LoggerEditor.this, "File reading is not yet available", Toast.LENGTH_LONG).show();
+					return;
+					
+//					Intent intent = new Intent().setClass(LoggerEditor.this,
+//							FileLogViewer.class);
+//					intent.putExtra(LogViewerBase.EXTRA_NAME,
+//							((FileAppender<ILoggingEvent>) a).getFile());
+//					startActivity(intent);
+//					dialog.dismiss();
+				}
+			});
+			ll.addView(button);
+		}
+
 		dialog.show();
 
 	}
@@ -595,38 +624,37 @@ public class LoggerEditor extends ListActivity {
 				holder = (LoggerEditor.ViewHolder) tag;
 			}
 
-			final Logger aLogger = super.getItem(position);
+			final Logger logger = super.getItem(position);
 
-			final StringBuilder txtBldr = new StringBuilder(aLogger.getName());
+			final StringBuilder txtBldr = new StringBuilder(logger.getName());
 			if (parent.showAppenderText.get()) {
-				txtBldr.append("  ").append(getAllAppenderString(aLogger));
+				txtBldr.append("  ").append(getAllAppenderString(logger));
 			}
 
 			holder.tv.setText(txtBldr.toString());
 
-			if (Loggers.isInheritingLevel(aLogger)) {
+			if (Loggers.isInheritingLevel(logger)) {
 				holder.tv.setTextAppearance(parent,
 						R.style.unselected_logger_font);
-				parent.setEffectiveIcon(aLogger.getEffectiveLevel(),
+				parent.setEffectiveIcon(logger.getEffectiveLevel(),
 						holder.levelIV);
 			} else {
 				holder.tv.setTextAppearance(parent,
 						R.style.selected_logger_font);
-				parent.setActualIcon(aLogger.getEffectiveLevel(),
-						holder.levelIV);
+				parent.setActualIcon(logger.getEffectiveLevel(), holder.levelIV);
 			}
 
-			if (aLogger == Loggers.ROOT_LOGGER) {
+			if (logger == Loggers.ROOT_LOGGER) {
 				holder.appenderIV
 						.setImageResource(R.drawable.appender_attached_icon);
-			} else if (!aLogger.isAdditive()) {
+			} else if (!logger.isAdditive()) {
 				holder.appenderIV
 						.setImageResource(R.drawable.appender_attached_icon);
 			} else {
 				holder.appenderIV.setImageBitmap(null);
 			}
 
-			final int viewColor = (aLogger.equals(parent.selectedLogger)) ? parent
+			final int viewColor = (logger.equals(parent.selectedLogger)) ? parent
 					.getResources().getColor(R.color.selected_logger_bg)
 					: parent.getResources().getColor(
 							R.color.unselected_logger_bg);

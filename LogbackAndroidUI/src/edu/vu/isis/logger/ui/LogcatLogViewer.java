@@ -19,7 +19,8 @@ import android.widget.Toast;
 public class LogcatLogViewer extends LogViewerBase {
 	
 	public static final int CONCAT_DATA_MSG = 0;
-	
+	public static final int NOTIFY_INVALID_REGEX_MSG = 1;
+
 	private static final int OPEN_PREFS_MENU = Menu.NONE + 3;
 	
 	private SharedPreferences prefs;
@@ -39,6 +40,10 @@ public class LogcatLogViewer extends LogViewerBase {
 					refreshList(elemList);
 				}
 				break;
+			case NOTIFY_INVALID_REGEX_MSG:
+				Toast.makeText(parent, "Syntax of regex is invalid",
+						Toast.LENGTH_LONG).show();
+				break;
 			default:
 				parent.logger.error("Handler received malformed message");
 			}
@@ -57,15 +62,7 @@ public class LogcatLogViewer extends LogViewerBase {
 		super.onCreate(savedInstanceState);
 		configureMaxLinesFromPrefs();
 		String regex = prefs.getString("regular_expression", "");
-		
-		
-		// Our superclass took care of retrieving the log reader after
-		// the configuration changed.
-		if(mLogReader != null) {
-			((LogcatLogReader)mLogReader).setRegex(regex);
-			return;
-		}
-		
+
 		try {
 			mLogReader = new LogcatLogReader(this, mHandler, regex);
 		} catch (IOException e) {
@@ -80,7 +77,21 @@ public class LogcatLogViewer extends LogViewerBase {
 		
 	}
 	
-	
+	@Override
+	public void onResume() {
+		super.onResume();
+		// This code reconfigures things according to the set preferences
+		configureMaxLinesFromPrefs();
+		String regex = prefs.getString("regular_expression", "");
+
+		// Our superclass will take care of retrieving the log reader
+		// if we left this activity to change the preferences
+		if (mLogReader != null) {
+			((LogcatLogReader) mLogReader).setRegex(regex);
+			return;
+		}
+	}
+
 	@Override
 	public boolean onPrepareOptionsMenu(Menu menu) {
 		
@@ -94,11 +105,12 @@ public class LogcatLogViewer extends LogViewerBase {
 	
 	
 	@Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-		if(item.getItemId() == OPEN_PREFS_MENU) {
-			final Intent intent = new Intent().setClass(this, LogViewerPreferences.class);
-        	startActivityForResult(intent, 0);
-        	return true;
+	public boolean onOptionsItemSelected(MenuItem item) {
+		if (item.getItemId() == OPEN_PREFS_MENU) {
+			final Intent intent = new Intent().setClass(this,
+					LogViewerPreferences.class);
+			startActivityForResult(intent, 0);
+			return true;
 		}
         return super.onOptionsItemSelected(item);
     }

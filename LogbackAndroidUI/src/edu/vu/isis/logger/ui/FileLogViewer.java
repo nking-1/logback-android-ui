@@ -65,11 +65,17 @@ public class FileLogViewer extends LogViewerBase {
 			super.mLogReader = this.mLogReader = new FileLogReader(this,
 					mHandler, filepath, numLines);
 		} catch (FileNotFoundException e) {
-			logger.error("Could not find file: {}", filepath);
+			String errorMsg = "Could not find file: " + filepath;
+			Toast.makeText(this, errorMsg, Toast.LENGTH_LONG).show();
+			logger.error(errorMsg);
 			e.printStackTrace();
+			return;
 		} catch (IOException e) {
-			logger.error("Error reading from file: {}", filepath);
+			String errorMsg = "Error reading from file: " + filepath;
+			Toast.makeText(this, errorMsg, Toast.LENGTH_LONG).show();
+			logger.error(errorMsg);
 			e.printStackTrace();
+			return;
 		}
 
 		mAdapter = new LogElementAdapter(this, R.layout.log_display_row);

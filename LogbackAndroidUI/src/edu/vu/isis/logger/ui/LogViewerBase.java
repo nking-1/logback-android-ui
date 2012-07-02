@@ -168,7 +168,8 @@ public class LogViewerBase extends ListActivity {
 	
 	protected void play() {
 		this.isPaused.set(false);
-		this.mLogReader.resume();
+		if (mLogReader != null)
+			this.mLogReader.resume();
 	}
 
 	
