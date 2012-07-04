@@ -1,6 +1,5 @@
 package edu.vu.isis.logger.ui;
 
-import java.util.List;
 import android.app.Activity;
 import android.os.Bundle;
 import android.widget.CheckBox;

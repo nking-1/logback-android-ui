@@ -8,22 +8,44 @@ import android.os.Handler;
 import android.os.Message;
 import android.view.Display;
 import android.view.LayoutInflater;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.view.View;
 import android.widget.AbsListView;
 import android.widget.TextView;
 import android.widget.Toast;
+import ch.qos.logback.classic.Level;
 import edu.vu.isis.logger.R;
 import edu.vu.isis.logger.util.FileLogReader;
 import edu.vu.isis.logger.util.LogElement;
 import edu.vu.isis.logger.util.LogElementAdapter;
 
-import ch.qos.logback.classic.Level;
-
+/**
+ * A log viewer designed to display logs from files. This class is not
+ * responsible for reading from the file. It is only responsible for displaying
+ * the contents of the file as read by its log reader.
+ * 
+ * An important optimization that has been made in this class is that it does
+ * not load all of the contents of a file at once. Because only a portion of a
+ * file can be viewed at a time on a small screen, this log viewer only loads
+ * enough of the file to allow the user to read a file smoothly. When the user
+ * scrolls to the edge of the currently loaded portion of the file, more data is
+ * loaded in the direction of the scrolling, and some of the data is cleared in
+ * the other direction. This behavior allows us to read files of extremely large
+ * size without blocking the UI thread or running out of memory.
+ * 
+ * @author Nick King
+ * 
+ */
 public class FileLogViewer extends LogViewerBase {
 
 	private FileLogReader mLogReader;
 
 	private int numEntriesToSave;
+	private long lastToastTime = 0;
+
+	private static final int JUMP_TOP_MENU = Menu.NONE + 1;
+	private static final int JUMP_BOTTOM_MENU = Menu.NONE + 2;
 
 	public final Handler mHandler = new Handler() {
 
@@ -51,8 +73,8 @@ public class FileLogViewer extends LogViewerBase {
 
 		final float textSize = tv.getTextSize();
 		final int linesOnScreen = (int) (largestDimension / textSize);
-		numEntriesToSave = linesOnScreen / 3;
-		final int numLines = numEntriesToSave + linesOnScreen;
+		numEntriesToSave = 2 * linesOnScreen;
+		final int numLines = 2 * (linesOnScreen + numEntriesToSave);
 
 		String filepath = processIntent();
 		if (filepath == null) {
@@ -64,6 +86,7 @@ public class FileLogViewer extends LogViewerBase {
 		try {
 			super.mLogReader = this.mLogReader = new FileLogReader(this,
 					mHandler, filepath, numLines);
+			mLogReader.start();
 		} catch (FileNotFoundException e) {
 			String errorMsg = "Could not find file: " + filepath;
 			Toast.makeText(this, errorMsg, Toast.LENGTH_LONG).show();
@@ -92,6 +115,44 @@ public class FileLogViewer extends LogViewerBase {
 
 	}
 
+	@Override
+	public boolean onPrepareOptionsMenu(Menu menu) {
+		final boolean returnValue = true && super.onPrepareOptionsMenu(menu);
+
+		menu.add(Menu.NONE, JUMP_BOTTOM_MENU, Menu.NONE, "Jump to end of file");
+		menu.add(Menu.NONE, JUMP_TOP_MENU, Menu.NONE,
+				"Jump to beginning of file");
+
+		return returnValue;
+	}
+
+	@Override
+	public boolean onOptionsItemSelected(MenuItem item) {
+		boolean returnValue = true;
+		switch (item.getItemId()) {
+		case JUMP_BOTTOM_MENU:
+			mLogReader.jumpToEndOfFile();
+			mAdapter.clear();
+			mAdapter.addAll(mLogReader.fillUp());
+			setScrollToBottom();
+			break;
+		case JUMP_TOP_MENU:
+			mLogReader.jumpToBeginningOfFile();
+			mAdapter.clear();
+			mAdapter.addAll(mLogReader.fillDown());
+			setScrollToTop();
+			break;
+		default:
+			returnValue = false;
+		}
+		return returnValue || super.onOptionsItemSelected(item);
+	}
+
+	/**
+	 * Helper method to get the extra out of the intent
+	 * 
+	 * @return -- the String extra in the intent
+	 */
 	private String processIntent() {
 		Object obj = getIntent().getExtras().get(EXTRA_NAME);
 		if (obj instanceof String) {
@@ -101,25 +162,43 @@ public class FileLogViewer extends LogViewerBase {
 		}
 	}
 
+	/**
+	 * Loads lines downwards to display new data from the file after the user
+	 * has reached the bottom of the listview. For each line added, a line is
+	 * cleared from the screen so that we uphold our log reader's contract that
+	 * the first and last lines in our adapter are exactly within its top and
+	 * bottom line markers.
+	 * 
+	 * @param firstVisiblePosition
+	 *            -- the position of the first line on screen
+	 * @param lastVisiblePosition
+	 *            -- the position of the last line on screen
+	 */
 	private void loadDown(int firstVisiblePosition, int lastVisiblePosition) {
 
 		// If we were already at the end of the file, notify the user, then
 		// get out
 		if (mLogReader.atEndOfFile()) {
+			// Don't make a toast unless it's been at least 2 seconds since the
+			// last one
+			if (!enoughTimePassed())
+				return;
 			Toast.makeText(this, "End of file", Toast.LENGTH_SHORT).show();
 			return;
 		}
 
-		final Object survivor = mListView.getItemAtPosition(firstVisiblePosition
-				- numEntriesToSave);
+		final Object topMarker = mListView
+				.getItemAtPosition(firstVisiblePosition - numEntriesToSave);
 		final LogElement firstVisible = (LogElement) mListView
 				.getItemAtPosition(firstVisiblePosition);
+
+		// This is our first fencepost
 		Object firstInList = mListView.getItemAtPosition(0);
 		LogElement nextElement = mLogReader.scrollDown();
 
-		// We loop until we reach the line we want to keep or until we reach
-		// the end of the file.  
-		while ((firstInList != survivor)
+		// We loop until we reach the end marker line or until we reach
+		// the beginning of the file.
+		while ((firstInList != topMarker)
 				&& (nextElement != FileLogReader.END_OF_FILE)) {
 			mAdapter.remove((LogElement) firstInList);
 			mAdapter.add(nextElement);
@@ -127,6 +206,14 @@ public class FileLogViewer extends LogViewerBase {
 			nextElement = mLogReader.scrollDown();
 		}
 
+		// This is our last fencepost. We don't want to show an end of file
+		// indicator, so we only do the final add/remove if we didn't reach
+		// the end of the file
+		if (nextElement != FileLogReader.END_OF_FILE) {
+			mAdapter.remove((LogElement) firstInList);
+			mAdapter.add(nextElement);
+		}
+
 		logger.debug("Adapter count: {}  Spread limit: {}",
 				mAdapter.getCount(), mLogReader.getSpreadLimit());
 
@@ -136,27 +223,45 @@ public class FileLogViewer extends LogViewerBase {
 
 	}
 
+	/**
+	 * Loads lines upwards to display new data from the file after the user has
+	 * reached the top of the listview. For each line added, a line is cleared
+	 * from the screen so that we uphold our log reader's contract that the
+	 * first and last lines in our adapter are exactly within its top and bottom
+	 * line markers.
+	 * 
+	 * @param firstVisiblePosition
+	 *            -- the position of the first line on screen
+	 * @param lastVisiblePosition
+	 *            -- the position of the last line on screen
+	 */
 	private void loadUp(int firstVisiblePosition, int lastVisiblePosition) {
 
 		// If we were already at the beginning of the file, notify the user,
 		// then get out
 		if (mLogReader.atBegOfFile()) {
+			// Don't make a toast unless it's been at least 2 seconds since the
+			// last one
+			if (!enoughTimePassed())
+				return;
 			Toast.makeText(this, "Beginning of file", Toast.LENGTH_SHORT)
 					.show();
 			return;
 		}
 
-		final Object survivor = mListView.getItemAtPosition(lastVisiblePosition
-				+ numEntriesToSave);
+		final Object endMarker = mListView
+				.getItemAtPosition(lastVisiblePosition + numEntriesToSave);
 		final LogElement firstVisible = (LogElement) mListView
 				.getItemAtPosition(firstVisiblePosition);
+
+		// This is our first fencepost
 		Object lastInList = mListView
 				.getItemAtPosition(mAdapter.getCount() - 1);
 		LogElement nextElement = mLogReader.scrollUp();
 
-		// We loop until we reach the line we want to keep or until we reach
+		// We loop until we reach the end marker line or until we reach
 		// the beginning of the file.
-		while ((lastInList != survivor)
+		while ((lastInList != endMarker)
 				&& (nextElement != FileLogReader.BEG_OF_FILE)) {
 			mAdapter.remove((LogElement) lastInList);
 			mAdapter.insert(nextElement, 0);
@@ -164,6 +269,14 @@ public class FileLogViewer extends LogViewerBase {
 			nextElement = mLogReader.scrollUp();
 		}
 
+		// This is our last fencepost. We don't want to show an end of file
+		// indicator, so we only do the final add/remove if we didn't reach
+		// the end of the file
+		if (nextElement != FileLogReader.BEG_OF_FILE) {
+			mAdapter.remove((LogElement) lastInList);
+			mAdapter.insert(nextElement, 0);
+		}
+
 		logger.debug("Adapter count: {}  Spread limit: {}",
 				mAdapter.getCount(), mLogReader.getSpreadLimit());
 		assert (mAdapter.getCount() == mLogReader.getSpreadLimit());
@@ -172,6 +285,28 @@ public class FileLogViewer extends LogViewerBase {
 
 	}
 
+	/**
+	 * Determines if enough time has passed since our last toast to display a
+	 * new toast. This is to prevent us from making too many toasts when the
+	 * user is at the beginning or end of a file.
+	 * 
+	 * @return
+	 */
+	private boolean enoughTimePassed() {
+		final long now = System.currentTimeMillis();
+		if (now - lastToastTime < 2000)
+			return false;
+		lastToastTime = now;
+		return true;
+	}
+
+	/**
+	 * This inner clas allows us to monitor the user's scrolling and determine
+	 * when we need to load more lines from our log reader
+	 * 
+	 * @author Nick King
+	 * 
+	 */
 	protected class FileOnScrollListener extends
 			LogViewerBase.MyOnScrollListener {
 

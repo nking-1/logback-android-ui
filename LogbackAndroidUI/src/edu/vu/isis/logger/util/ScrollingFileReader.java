@@ -270,6 +270,29 @@ public class ScrollingFileReader {
 		}
 
 	}
+	
+	/**
+	 * Sets the top and bottom markers to both be at the beginning of the file.
+	 * The effective spread is therefore 0 after this method is called.  It is
+	 * recommended to call leapForward() or stepForward() after calling this
+	 * method to read the beginning lines of the file.
+	 */
+	public void jumpToBeginningOfFile() {
+		botLinePos = topLinePos = 0;
+		effectiveSpread = 0;
+	}
+	
+	/**
+	 * Sets the top and bottom markers to both be at the end of the file.
+	 * The effective spread is therefore 0 after this method is called.  It is
+	 * recommended to call leapBackward() or stepBackward() after calling this
+	 * method to read the last lines of the file.
+	 */
+	public void jumpToEndOfFile() {
+		botLinePos = topLinePos = (int) mFile.length();
+		effectiveSpread = 0;
+	}
+	
 
 	public int getNumLinesInBuffer() {
 		return countLinesInBuffer();

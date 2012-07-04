@@ -12,13 +12,10 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.slf4j.LoggerFactory;
 
-import android.app.AlertDialog;
 import android.app.Dialog;
 import android.app.ListActivity;
 import android.content.BroadcastReceiver;
 import android.content.Context;
-import android.content.DialogInterface;
-import android.content.DialogInterface.OnClickListener;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.net.Uri;
@@ -40,7 +37,6 @@ import android.widget.Toast;
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.LoggerContext;
-import ch.qos.logback.classic.android.LogcatAppender;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.Appender;
 import ch.qos.logback.core.FileAppender;
