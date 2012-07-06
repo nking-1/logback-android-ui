@@ -1,8 +1,10 @@
 package edu.vu.isis.logger.ui;
 
+import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.InputStream;
+import java.io.ObjectInputStream;
 import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -18,6 +20,7 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.database.Cursor;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
@@ -44,6 +47,7 @@ import ch.qos.logback.core.joran.action.Action;
 import ch.qos.logback.core.joran.spi.JoranException;
 import ch.qos.logback.core.joran.spi.Pattern;
 import edu.vu.isis.logger.R;
+import edu.vu.isis.logger.temp.CpConstants;
 import edu.vu.isis.logger.util.LoggerConfigureAction;
 import edu.vu.isis.logger.util.Loggers;
 import edu.vu.isis.logger.util.SimpleConfigurator;
@@ -98,10 +102,27 @@ public class LoggerEditor extends ListActivity {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.logger_editor);
 
-		// LoggerContext provides access to a List of all active loggers
-		final LoggerContext lc = (LoggerContext) LoggerFactory
-				.getILoggerFactory();
-		final List<Logger> loggerList = lc.getLoggerList();
+		Cursor cursor = getContentResolver().query(CpConstants.LoggerTable.CONTENT_URI, null, null, null, null);
+		
+		if(cursor != null && cursor.getCount() >= 1) {
+			while(cursor.moveToNext()) {
+				
+				final int nameIndex = cursor.getColumnIndexOrThrow(CpConstants.LoggerTable.NAME);
+				final int levelIndex = cursor.getColumnIndexOrThrow(CpConstants.LoggerTable.LEVEL_INT);
+				final int effectiveIndex = cursor.getColumnIndexOrThrow(CpConstants.LoggerTable.EFFECTIVE_APPENDER_NAMES);
+				final int attachedIndex = cursor.getColumnIndexOrThrow(CpConstants.LoggerTable.ATTACHED_APPENDER_NAMES);
+				
+				final String name = cursor.getString(nameIndex);
+				final int levelInt = cursor.getInt(levelIndex);
+				final byte[] effective = cursor.getBlob(effectiveIndex);
+				final byte[] attached = cursor.getBlob(appenderIndex);
+				
+				ObjectInputStream in = new ObjectInputStream(new ByteArrayInputStream(effective));
+				String[] effectiveNames = (String[]) in.readObject();
+				
+			}
+		}
+		
 		this.loggerTree = makeTree(loggerList);
 
 		initAppenderNames();

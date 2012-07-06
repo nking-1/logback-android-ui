@@ -8,6 +8,7 @@
 
     <uses-permission android:name="android.permission.READ_LOGS" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+    <uses-permission android:name="edu.vu.isis.logger.permission.READ_WRITE_LOGBACK_LOGGERS"/>
     
     <application
         android:icon="@drawable/ic_launcher"
