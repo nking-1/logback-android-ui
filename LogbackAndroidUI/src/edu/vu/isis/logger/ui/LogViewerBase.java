@@ -24,10 +24,10 @@ import edu.vu.isis.logger.util.LogReader;
  * extended and not used directly. It encapsulates behaviors that are common to
  * all log viewers.
  * 
- * All log viewers are coupled with a log reader. The log reader is strictly
- * responsible for reading the log messages from whatever the source may be and
- * wrapping those messages inside LogElement objects. The log viewer is strictly
- * responsible for displaying the LogElements from its log reader on screen.
+ * All log viewers are coupled with a log reader. The log viewer is strictly
+ * responsible for displaying the LogElements from its log reader on screen. The
+ * log reader is strictly responsible for reading the log messages from whatever
+ * the source may be and wrapping those messages inside LogElement objects.
  * 
  * @author Nick King
  * 
@@ -37,7 +37,6 @@ public class LogViewerBase extends ListActivity {
 	protected LogElementAdapter mAdapter;
 	protected ListView mListView;
 	protected final AtomicBoolean isPaused = new AtomicBoolean(false);
-	protected final AtomicBoolean isAutoJump = new AtomicBoolean(true);
 	protected boolean isConfigChanging = false;
 
 	/* Menu constants */
@@ -73,10 +72,9 @@ public class LogViewerBase extends ListActivity {
 			mAdapter = (LogElementAdapter) oArr[ADAPTER_INDEX];
 		}
 
+		mAdapter.setNotifyOnChange(true);
 		setListAdapter(mAdapter);
 		mListView.setDivider(null);
-		mListView.setOnScrollListener(new MyOnScrollListener());
-		mListView.setOnTouchListener(new MyOnTouchListener());
 
 	}
 
@@ -191,7 +189,6 @@ public class LogViewerBase extends ListActivity {
 	 */
 	protected void setScrollToTop() {
 		this.mListView.setSelection(0);
-		this.isAutoJump.set(false);
 	}
 
 	/**
@@ -199,47 +196,6 @@ public class LogViewerBase extends ListActivity {
 	 */
 	protected void setScrollToBottom() {
 		this.mListView.setSelection(this.mAdapter.getCount() - 1);
-		this.isAutoJump.set(true);
-	}
-
-	/*
-	 * The inner classes below allow us to determine when to have the list
-	 * scroll down automatically whenever a new log comes in.
-	 */
-
-	protected class MyOnScrollListener implements OnScrollListener {
-
-		private LogViewerBase parent = LogViewerBase.this;
-
-		@Override
-		public void onScrollStateChanged(AbsListView view, int scrollState) {
-			if (view.getLastVisiblePosition() - 1 == view.getAdapter()
-					.getCount()) {
-				parent.isAutoJump.set(true);
-			}
-		}
-
-		@Override
-		public void onScroll(AbsListView view, int firstVisibleItem,
-				int visibleItemCount, int totalItemCount) {
-			final boolean atEndOfList = (visibleItemCount + firstVisibleItem == totalItemCount);
-			if (atEndOfList) {
-				parent.isAutoJump.set(true);
-			}
-		}
-
-	}
-
-	protected class MyOnTouchListener implements OnTouchListener {
-
-		private LogViewerBase parent = LogViewerBase.this;
-
-		@Override
-		public boolean onTouch(View v, MotionEvent event) {
-			parent.isAutoJump.set(false);
-			return false;
-		}
-
 	}
 
 }

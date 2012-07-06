@@ -37,7 +37,9 @@ import android.os.Message;
 public class LogcatLogReader extends LogReader {
 
 	private static final int BUFFER_SIZE = 1024;
-	private static final long SEND_DELAY = 10;
+	
+	/** number of milliseconds to delay each message update */
+	private static final long SEND_DELAY = 30;
 
 	public static final int CONCAT_DATA_MSG = 0;
 	public static final int NOTIFY_INVALID_REGEX_MSG = 1;

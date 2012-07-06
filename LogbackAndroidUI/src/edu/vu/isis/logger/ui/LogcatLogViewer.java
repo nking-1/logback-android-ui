@@ -11,6 +11,7 @@ import android.os.Message;
 import android.preference.PreferenceManager;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.widget.AbsListView;
 import android.widget.Toast;
 import edu.vu.isis.logger.util.LogElement;
 import edu.vu.isis.logger.util.LogcatLogReader;
@@ -44,7 +45,9 @@ public class LogcatLogViewer extends LogViewerBase {
 				if (msg.obj != null) {
 					@SuppressWarnings("unchecked")
 					final List<LogElement> elemList = (List<LogElement>) msg.obj;
-					refreshList(elemList);
+					final boolean jumpDown = (mListView.getLastVisiblePosition() == mAdapter.getCount()-1);
+					mAdapter.addAll(elemList);
+					if(jumpDown) mListView.setSelection(mAdapter.getCount()-1);
 				}
 				break;
 			case LogcatLogReader.NOTIFY_INVALID_REGEX_MSG:
@@ -77,7 +80,6 @@ public class LogcatLogViewer extends LogViewerBase {
 		}
 
 		mLogReader.start();
-
 	}
 
 	@Override
@@ -148,20 +150,6 @@ public class LogcatLogViewer extends LogViewerBase {
 	private void configureMaxLinesFromPrefs() {
 		mAdapter.setMaxLines(Math.abs(Integer.parseInt(prefs.getString(
 				"logcat_max_lines", "1000"))));
-	}
-
-	/**
-	 * Adds all of the new logs to the list adapter and jumps to the bottom of
-	 * the list if appropriate
-	 * 
-	 * @param elemList
-	 */
-	private void refreshList(List<LogElement> elemList) {
-		mAdapter.addAll(elemList);
-		mAdapter.notifyDataSetChanged();
-		if (isAutoJump.get()) {
-			setScrollToBottom();
-		}
 	}
 
 }

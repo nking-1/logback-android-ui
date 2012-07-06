@@ -12,6 +12,7 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.AbsListView;
+import android.widget.AbsListView.OnScrollListener;
 import android.widget.TextView;
 import android.widget.Toast;
 import ch.qos.logback.classic.Level;
@@ -307,15 +308,12 @@ public class FileLogViewer extends LogViewerBase {
 	 * @author Nick King
 	 * 
 	 */
-	protected class FileOnScrollListener extends
-			LogViewerBase.MyOnScrollListener {
+	protected class FileOnScrollListener implements OnScrollListener {
 
 		private FileLogViewer parent = FileLogViewer.this;
 
 		@Override
 		public void onScrollStateChanged(AbsListView view, int scrollState) {
-			super.onScrollStateChanged(view, scrollState);
-
 			final int firstVisiblePosition = parent.mListView
 					.getFirstVisiblePosition();
 			final int totalItemCount = parent.mAdapter.getCount();
@@ -330,6 +328,12 @@ public class FileLogViewer extends LogViewerBase {
 			} else if (atBeginningOfList) {
 				parent.loadUp(firstVisiblePosition, lastVisiblePosition);
 			}
+		}
+
+		@Override
+		public void onScroll(AbsListView view, int firstVisibleItem,
+				int visibleItemCount, int totalItemCount) {
+			// Do nothing
 		}
 
 	}

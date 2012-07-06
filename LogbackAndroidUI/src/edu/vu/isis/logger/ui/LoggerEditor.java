@@ -650,13 +650,6 @@ public class LoggerEditor extends ListActivity {
 				holder.appenderIV.setImageBitmap(null);
 			}
 
-			final int viewColor = (logger.equals(parent.selectedLogger)) ? parent
-					.getResources().getColor(R.color.selected_logger_bg)
-					: parent.getResources().getColor(
-							R.color.unselected_logger_bg);
-
-			parent.setViewColor(row, viewColor);
-
 			return row;
 		}
 
@@ -710,9 +703,9 @@ public class LoggerEditor extends ListActivity {
 
 	}
 
-	private void setViewColor(View row, int color) {
-		row.setBackgroundColor(color);
-	}
+//	private void setViewColor(View row, int color) {
+//		row.setBackgroundColor(color);
+//	}
 
 	/**
 	 * Get the appenders for the selected logger (matches current view) The

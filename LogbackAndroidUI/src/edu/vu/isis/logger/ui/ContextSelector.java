@@ -28,8 +28,9 @@ public class ContextSelector extends ListActivity {
 		
 		setListAdapter(adapter);
 		
-		LoggerFactory.getLogger("a");
-		LoggerFactory.getLogger("b");
+		for(char ch='a'; ch<='z'; ch++) {
+			LoggerFactory.getLogger("" + ch);
+		}
 		
 	}
 	
