@@ -25,11 +25,11 @@ public class CpConstants {
 		// Columns
 		public static final String NAME = "name";
 		public static final String LEVEL_INT = "level_int";
-		public static final String EFFECTIVE_APPENDER_NAMES = "effective_appender_names";
+		public static final String ADDITIVITY = "additivity";
 		public static final String ATTACHED_APPENDER_NAMES = "attached_appender_names";
 
 		public static final String[] COLUMN_NAMES = { NAME, LEVEL_INT,
-				EFFECTIVE_APPENDER_NAMES, ATTACHED_APPENDER_NAMES };
+				ADDITIVITY, ATTACHED_APPENDER_NAMES };
 
 	}
 

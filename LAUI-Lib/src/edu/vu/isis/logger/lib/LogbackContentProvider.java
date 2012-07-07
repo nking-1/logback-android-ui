@@ -25,7 +25,7 @@ import ch.qos.logback.core.FileAppender;
 public class LogbackContentProvider extends ContentProvider {
 
 	public static final String AUTHORITY = "edu.vu.isis.logger.LogbackContentProvider";
-	
+
 	public static final class LoggerTable implements BaseColumns {
 
 		// URI and MIME type constants
@@ -44,11 +44,11 @@ public class LogbackContentProvider extends ContentProvider {
 		// Columns
 		public static final String NAME = "name";
 		public static final String LEVEL_INT = "level_int";
-		public static final String EFFECTIVE_APPENDER_NAMES = "effective_appender_names";
+		public static final String ADDITIVITY = "additivity";
 		public static final String ATTACHED_APPENDER_NAMES = "attached_appender_names";
 
 		public static final String[] COLUMN_NAMES = { NAME, LEVEL_INT,
-				EFFECTIVE_APPENDER_NAMES, ATTACHED_APPENDER_NAMES };
+				ADDITIVITY, ATTACHED_APPENDER_NAMES };
 
 	}
 
@@ -81,28 +81,29 @@ public class LogbackContentProvider extends ContentProvider {
 	private static final int MULTIPLE_LOGGERS = 2;
 	private static final int SINGLE_APPENDER = 3;
 	private static final int MULTIPLE_APPENDERS = 4;
-	
+
 	// Key contants for updating tables
 	public static final String LEVEL_KEY = "level";
 	public static final String APPENDER_KEY = "appender";
 
 	private static UriMatcher URI_MATCHER;
-	public static final Uri OP_NOT_SUPPORTED = Uri.parse("That operation is not supported");
+	public static final Uri OP_NOT_SUPPORTED = Uri
+			.parse("That operation is not supported");
 
 	private static final LoggerContext LOGGER_CONTEXT = (LoggerContext) LoggerFactory
 			.getILoggerFactory();
 	private static final List<Logger> LOGGER_LIST = LOGGER_CONTEXT
 			.getLoggerList();
 	private static final List<Appender<ILoggingEvent>> APPENDER_LIST = new ArrayList<Appender<ILoggingEvent>>();
-	
+
 	// Fill the appender list
 	static {
 		// Joran provided a raw type so we don't really have a choice here
 		@SuppressWarnings("rawtypes")
 		Map appenderMap = AppenderStore.getAppenderMap();
-		for(Object o : appenderMap.values()) {
+		for (Object o : appenderMap.values()) {
 			@SuppressWarnings("unchecked")
-			Appender<ILoggingEvent> a = (Appender<ILoggingEvent>)o;
+			Appender<ILoggingEvent> a = (Appender<ILoggingEvent>) o;
 			APPENDER_LIST.add(a);
 		}
 	}
@@ -129,7 +130,6 @@ public class LogbackContentProvider extends ContentProvider {
 
 	}
 
-	
 	@Override
 	public boolean onCreate() {
 		// TODO Auto-generated method stub
@@ -138,7 +138,6 @@ public class LogbackContentProvider extends ContentProvider {
 		return true;
 	}
 
-	
 	@Override
 	public Cursor query(Uri uri, String[] projection, String selection,
 			String[] selectionArgs, String sortOrder) {
@@ -178,40 +177,35 @@ public class LogbackContentProvider extends ContentProvider {
 			cursor = new MatrixCursor(
 					LogbackContentProvider.AppenderTable.COLUMN_NAMES,
 					LogbackContentProvider.APPENDER_LIST.size());
-			for(Appender<?> appender : LogbackContentProvider.APPENDER_LIST){
+			for (Appender<?> appender : LogbackContentProvider.APPENDER_LIST) {
 				cursor.addRow(makeAppenderRow(appender));
 			}
 			break;
-			
+
 		default:
 			cursor = null;
 
 		}
 		return cursor;
 	}
-	
-	
+
 	private Object[] makeAppenderRow(Appender<?> appender) {
 		String name = appender.getName();
 		String filePathString = null;
-		if(appender instanceof FileAppender) {
+		if (appender instanceof FileAppender) {
 			filePathString = ((FileAppender<?>) appender).getFile();
 		}
-		Object[] fields = {name, filePathString};
+		Object[] fields = { name, filePathString };
 		return fields;
 	}
-	
 
 	private Object[] makeLoggerRow(Logger logger) {
 		String name = logger.getName();
 		Integer levelInt = logger.getLevel().levelInt;
-
-		List<Appender<ILoggingEvent>> effectiveAppenders = Loggers
-				.getEffectiveAppenders(logger);
-		String[] effectiveAppenderNames = new String[effectiveAppenders.size()];
-		for (int i = 0; i < effectiveAppenderNames.length; i++) {
-			effectiveAppenderNames[i] = effectiveAppenders.get(i).getName();
-		}
+		
+		// We use an integer instead of a boolean because it's standard
+		// SQLite style to do so
+		int additivityInt = logger.isAdditive() ? 1 : 0;
 
 		List<Appender<ILoggingEvent>> attachedAppenders = Loggers
 				.getAttachedAppenders(logger);
@@ -220,15 +214,14 @@ public class LogbackContentProvider extends ContentProvider {
 			attachedAppenderNames[i] = attachedAppenders.get(i).getName();
 		}
 
-		Object[] fields = { name, levelInt, effectiveAppenderNames,
+		Object[] fields = { name, levelInt, additivityInt,
 				attachedAppenderNames };
 		return fields;
 	}
 
-	
 	@Override
 	public String getType(Uri uri) {
-		switch(LogbackContentProvider.URI_MATCHER.match(uri)) {
+		switch (LogbackContentProvider.URI_MATCHER.match(uri)) {
 		case SINGLE_LOGGER:
 			return LogbackContentProvider.LoggerTable.MIME_TYPE_SINGLE;
 		case MULTIPLE_LOGGERS:
@@ -242,9 +235,9 @@ public class LogbackContentProvider extends ContentProvider {
 		}
 	}
 
-	
 	/**
 	 * This operation is not supported by this ContentProvider
+	 * 
 	 * @return OP_NOT_SUPPORTED (operation not supported)
 	 */
 	@Override
@@ -252,65 +245,67 @@ public class LogbackContentProvider extends ContentProvider {
 		return OP_NOT_SUPPORTED;
 	}
 
-	
 	/**
 	 * This operation is not supported by this ContentProvider
+	 * 
 	 * @return -1 (operation not supported)
 	 */
 	@Override
 	public int delete(Uri uri, String selection, String[] selectionArgs) {
 		return -1;
 	}
-	
 
 	/**
-	 * Updates a Logger given by the selection string(s).  A Uri should be
-	 * given to indicate whether one or multiple loggers are to be
-	 * edited.  If only one logger is to be edited, put its name
-	 * in the selection argument.  If multiple loggers are to be edited,
-	 * put all of their names in the selectionArgs argument.  The
-	 * ContentValues argument should have a key and a value indicating the new
-	 * level and/or appender for the given logger(s).  Use the LEVEL_KEY
-	 * and APPENDER_KEY constants provided by this class as keys for
-	 * putting information into a ContentValues object.  The value of levels
-	 * should be indicated by the integer constants in the Logback Level class.
-	 * Appender values should be indicated by a String holding their name.
+	 * Updates a Logger given by the selection string(s). A Uri should be given
+	 * to indicate whether one or multiple loggers are to be edited. If only one
+	 * logger is to be edited, put its name in the selection argument. If
+	 * multiple loggers are to be edited, put all of their names in the
+	 * selectionArgs argument. The ContentValues argument should have a key and
+	 * a value indicating the new level and/or appender for the given logger(s).
+	 * Use the LEVEL_KEY and APPENDER_KEY constants provided by this class as
+	 * keys for putting information into a ContentValues object. The value of
+	 * levels should be indicated by the integer constants in the Logback Level
+	 * class. Appender values should be indicated by a String holding their
+	 * name.
 	 */
 	@Override
 	public int update(Uri uri, ContentValues values, String selection,
 			String[] selectionArgs) {
 		int updateCount = 0;
-		switch(URI_MATCHER.match(uri)) {
+		switch (URI_MATCHER.match(uri)) {
 		case SINGLE_LOGGER:
-			if(updateLoggerByName(selection, values)) updateCount++;
+			if (updateLoggerByName(selection, values))
+				updateCount++;
 			break;
-			
+
 		case MULTIPLE_LOGGERS:
-			for(String sel : selectionArgs) {
-				if(updateLoggerByName(sel, values)) updateCount++;
+			for (String sel : selectionArgs) {
+				if (updateLoggerByName(sel, values))
+					updateCount++;
 			}
 			break;
-			
+
 		default:
 			return -1;
 		}
 		return updateCount;
 	}
 
-
 	private boolean updateLoggerByName(String selection, ContentValues values) {
 		Logger logger = LOGGER_CONTEXT.exists(selection);
 		Integer levelInt = values.getAsInteger(LEVEL_KEY);
 		String appenderStr = values.getAsString(APPENDER_KEY);
 		boolean isUpdate = false;
-		
-		if(logger == null) return isUpdate;
-		if(levelInt != null) isUpdate |= updateLevel(logger, levelInt);
-		if(appenderStr != null) isUpdate |= updateAppender(logger, appenderStr);
-		
+
+		if (logger == null)
+			return isUpdate;
+		if (levelInt != null)
+			isUpdate |= updateLevel(logger, levelInt);
+		if (appenderStr != null)
+			isUpdate |= updateAppender(logger, appenderStr);
+
 		return isUpdate;
 	}
-
 
 	private static final Comparator<Appender<?>> APPENDER_COMPARATOR = new Comparator<Appender<?>>() {
 
@@ -320,16 +315,17 @@ public class LogbackContentProvider extends ContentProvider {
 		}
 
 	};
-	
+
 	// TODO: This method is not working (not complete)
 	private boolean updateAppender(Logger logger, String appenderStr) {
-		
-		if(APPENDER_LIST.isEmpty()) return false;
-		
+
+		if (APPENDER_LIST.isEmpty())
+			return false;
+
 		Collections.sort(APPENDER_LIST, APPENDER_COMPARATOR);
 		Collections.binarySearch(APPENDER_LIST, null, APPENDER_COMPARATOR);
 		return true;
-		
+
 	}
 
 	/**
@@ -342,8 +338,8 @@ public class LogbackContentProvider extends ContentProvider {
 	 * @return true if the logger is updated, false if not
 	 */
 	private boolean updateLevel(Logger logger, Integer levelInt) {
-		
-		switch(levelInt.intValue()) {
+
+		switch (levelInt.intValue()) {
 		case Level.TRACE_INT:
 			logger.setLevel(Level.TRACE);
 			break;
@@ -365,10 +361,9 @@ public class LogbackContentProvider extends ContentProvider {
 		default:
 			return false;
 		}
-		
+
 		return true;
-		
+
 	}
-	
 
 }

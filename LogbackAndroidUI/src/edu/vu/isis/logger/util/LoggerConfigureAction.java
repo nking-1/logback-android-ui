@@ -17,7 +17,6 @@ import ch.qos.logback.core.joran.spi.InterpretationContext;
 public class LoggerConfigureAction extends Action {
 
 	public static final String NO_APPENDER_STR = "none";
-	public static final String NO_LEVEL_STR = "null";
 	
 	public static final String NAME_ATR = "name";
 	public static final String LEVEL_ATR = "level";
