@@ -5,7 +5,7 @@ import android.provider.BaseColumns;
 
 public class CpConstants {
 
-	public static final String AUTHORITY = "edu.vu.isis.logger.LogbackContentProvider";
+	public static final String AUTHORITY = "edu.vu.isis.logger.LauiContentProvider";
 
 	public static final class LoggerTable implements BaseColumns {
 
@@ -56,5 +56,14 @@ public class CpConstants {
 		public static final String[] COLUMN_NAMES = { NAME, FILE_PATH_STRING };
 
 	}
+
+	// Key contants for updating tables
+	public static final String LEVEL_KEY = "level";
+	public static final String APPENDER_KEY = "appender";
+
+	public static final Uri OP_NOT_SUPPORTED = Uri
+			.parse("That operation is not supported");
+	
+	public static final int NO_LEVEL = -152;
 
 }

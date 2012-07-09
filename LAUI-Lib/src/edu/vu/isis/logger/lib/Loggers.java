@@ -256,19 +256,12 @@ public final class Loggers {
 	}
 	
 	/**
-	 * Determines whether a Logger has the same *effective* appenders as its
-	 * parent/ancestors. This method does not account for additivity; it doesn't
-	 * stop ascending the tree.
+	 * Determines whether a Logger has the same Appenders attached to it
+	 * as the Appenders that are affecting its parent.
 	 * 
 	 * @param logger
-	 *            -- the child Logger to check
-	 * @return -- whether logger has the same appenders as its parent
+	 * @return
 	 */
-	public static boolean hasSameEffectiveAppendersAsParent(Logger logger) {
-		return getEffectiveAppenders(logger).equals(
-				getEffectiveAppenders(getParentLogger(logger)));
-	}
-	
 	public static boolean hasSameAppendersAsParent(Logger logger) {
 		return getAttachedAppenders(logger).equals(
 				getEffectiveAppenders(getParentLogger(logger)));
@@ -385,9 +378,10 @@ public final class Loggers {
 	}
 
 
-	public static void clearAppenders(Logger selectedLogger) {
-		for (Appender<ILoggingEvent> appender : getAttachedAppenders(selectedLogger)) {
-			selectedLogger.detachAppender(appender);
+	public static void clearAppenders(Logger logger) {
+		Appender<ILoggingEvent> a = null;
+		for(Iterator<Appender<ILoggingEvent>> itr = logger.iteratorForAppenders(); itr.hasNext(); a = itr.next()) {
+			logger.detachAppender(a);
 		}
 	}
 	

@@ -33,6 +33,7 @@ public class AppenderStore {
 			throw new IllegalStateException(
 					"A reference has already been stored.");
 		}
+		System.out.println("Reference to appenderBag stored");
 		instance = new AppenderStore(map);
 	}
 

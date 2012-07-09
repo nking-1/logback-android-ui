@@ -1,8 +1,10 @@
 package edu.vu.isis.logger.lib;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
@@ -24,9 +26,9 @@ import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.Appender;
 import ch.qos.logback.core.FileAppender;
 
-public class LogbackContentProvider extends ContentProvider {
+public class LauiContentProvider extends ContentProvider {
 
-	public static final String AUTHORITY = "edu.vu.isis.logger.LogbackContentProvider";
+	public static final String AUTHORITY = "edu.vu.isis.logger.LauiContentProvider";
 
 	public static final class LoggerTable implements BaseColumns {
 
@@ -91,47 +93,30 @@ public class LogbackContentProvider extends ContentProvider {
 	private static UriMatcher URI_MATCHER;
 	public static final Uri OP_NOT_SUPPORTED = Uri
 			.parse("That operation is not supported");
-	
+
 	/** Indicates a null level on a logger */
-	private static final int NO_LEVEL = -152;
+	public static final int NO_LEVEL = -152;
 
 	private static final LoggerContext LOGGER_CONTEXT = (LoggerContext) LoggerFactory
 			.getILoggerFactory();
-	private static final List<Appender<ILoggingEvent>> APPENDER_LIST = new ArrayList<Appender<ILoggingEvent>>();
 
 	private String logTag;
 
-	// Fill the appender list
-	static {
-		// Joran provided a raw type so we don't really have a choice here
-		@SuppressWarnings("rawtypes")
-		Map appenderMap = AppenderStore.getAppenderMap();
-		for (Object o : appenderMap.values()) {
-			@SuppressWarnings("unchecked")
-			Appender<ILoggingEvent> a = (Appender<ILoggingEvent>) o;
-			APPENDER_LIST.add(a);
-		}
-	}
-
 	// Initialize the Uri matcher
 	static {
-		LogbackContentProvider.URI_MATCHER = new UriMatcher(UriMatcher.NO_MATCH);
-		LogbackContentProvider.URI_MATCHER.addURI(
-				LogbackContentProvider.AUTHORITY,
-				LogbackContentProvider.LoggerTable.PATH_SINGLE,
-				LogbackContentProvider.SINGLE_LOGGER);
-		LogbackContentProvider.URI_MATCHER.addURI(
-				LogbackContentProvider.AUTHORITY,
-				LogbackContentProvider.LoggerTable.PATH_MULTIPLE,
-				LogbackContentProvider.MULTIPLE_LOGGERS);
-		LogbackContentProvider.URI_MATCHER.addURI(
-				LogbackContentProvider.AUTHORITY,
-				LogbackContentProvider.AppenderTable.PATH_SINGLE,
-				LogbackContentProvider.SINGLE_APPENDER);
-		LogbackContentProvider.URI_MATCHER.addURI(
-				LogbackContentProvider.AUTHORITY,
-				LogbackContentProvider.AppenderTable.PATH_SINGLE,
-				LogbackContentProvider.MULTIPLE_APPENDERS);
+		LauiContentProvider.URI_MATCHER = new UriMatcher(UriMatcher.NO_MATCH);
+		LauiContentProvider.URI_MATCHER.addURI(LauiContentProvider.AUTHORITY,
+				LauiContentProvider.LoggerTable.PATH_SINGLE,
+				LauiContentProvider.SINGLE_LOGGER);
+		LauiContentProvider.URI_MATCHER.addURI(LauiContentProvider.AUTHORITY,
+				LauiContentProvider.LoggerTable.PATH_MULTIPLE,
+				LauiContentProvider.MULTIPLE_LOGGERS);
+		LauiContentProvider.URI_MATCHER.addURI(LauiContentProvider.AUTHORITY,
+				LauiContentProvider.AppenderTable.PATH_SINGLE,
+				LauiContentProvider.SINGLE_APPENDER);
+		LauiContentProvider.URI_MATCHER.addURI(LauiContentProvider.AUTHORITY,
+				LauiContentProvider.AppenderTable.PATH_MULTIPLE,
+				LauiContentProvider.MULTIPLE_APPENDERS);
 
 	}
 
@@ -160,38 +145,34 @@ public class LogbackContentProvider extends ContentProvider {
 			String[] selectionArgs, String sortOrder) {
 
 		final MatrixCursor cursor;
-		switch (LogbackContentProvider.URI_MATCHER.match(uri)) {
+		switch (LauiContentProvider.URI_MATCHER.match(uri)) {
 
-		case SINGLE_LOGGER:
-			
-		{
+		case SINGLE_LOGGER: {
 			Log.i(logTag, "Got a query for a single logger");
 			cursor = new MatrixCursor(
-					LogbackContentProvider.LoggerTable.COLUMN_NAMES, 1);
+					LauiContentProvider.LoggerTable.COLUMN_NAMES, 1);
 			final int whichLogger = Integer.parseInt(uri.getPathSegments().get(
 					1));
-			
+
 			final List<Logger> loggerList = LOGGER_CONTEXT.getLoggerList();
-			if(whichLogger > loggerList.size()-1) {
-				Log.e(logTag, "Got request for logger #" + whichLogger +
-						" but there are only " + loggerList.size() +
-						" loggers.");
+			if (whichLogger > loggerList.size() - 1) {
+				Log.e(logTag, "Got request for logger #" + whichLogger
+						+ " but there are only " + loggerList.size()
+						+ " loggers.");
 				return null;
 			}
-			
+
 			Logger selectedLogger = loggerList.get(whichLogger);
 			cursor.addRow(makeLoggerRow(selectedLogger));
 		}
 			break;
 
-		case MULTIPLE_LOGGERS:
-			
-		{
+		case MULTIPLE_LOGGERS: {
 			Log.i(logTag, "Got a query for all loggers");
-			
+
 			final List<Logger> loggerList = LOGGER_CONTEXT.getLoggerList();
 			cursor = new MatrixCursor(
-					LogbackContentProvider.LoggerTable.COLUMN_NAMES,
+					LauiContentProvider.LoggerTable.COLUMN_NAMES,
 					loggerList.size());
 			for (Logger logger : loggerList) {
 				cursor.addRow(makeLoggerRow(logger));
@@ -199,25 +180,36 @@ public class LogbackContentProvider extends ContentProvider {
 		}
 			break;
 
-		case SINGLE_APPENDER:
+		case SINGLE_APPENDER: {
 			Log.i(logTag, "Got a query for a single appender");
 			cursor = new MatrixCursor(
-					LogbackContentProvider.AppenderTable.COLUMN_NAMES, 1);
+					LauiContentProvider.AppenderTable.COLUMN_NAMES, 1);
 			final int whichAppender = Integer.parseInt(uri.getPathSegments()
 					.get(1));
-			Appender<?> selectedAppender = LogbackContentProvider.APPENDER_LIST
-					.get(whichAppender);
+			final List<Appender<ILoggingEvent>> appenderList = getAppenderList();
+
+			if (whichAppender > appenderList.size() - 1) {
+				Log.e(logTag, "Got request for logger #" + whichAppender
+						+ " but there are only " + appenderList.size()
+						+ " loggers.");
+				return null;
+			}
+
+			Appender<?> selectedAppender = appenderList.get(whichAppender);
 			cursor.addRow(makeAppenderRow(selectedAppender));
+		}
 			break;
 
-		case MULTIPLE_APPENDERS:
+		case MULTIPLE_APPENDERS: {
 			Log.i(logTag, "Got a query for all appenders");
+			List<Appender<ILoggingEvent>> appenderList = getAppenderList();
 			cursor = new MatrixCursor(
-					LogbackContentProvider.AppenderTable.COLUMN_NAMES,
-					LogbackContentProvider.APPENDER_LIST.size());
-			for (Appender<?> appender : LogbackContentProvider.APPENDER_LIST) {
+					LauiContentProvider.AppenderTable.COLUMN_NAMES,
+					appenderList.size());
+			for (Appender<?> appender : appenderList) {
 				cursor.addRow(makeAppenderRow(appender));
 			}
+		}
 			break;
 
 		default:
@@ -242,7 +234,7 @@ public class LogbackContentProvider extends ContentProvider {
 		String name = logger.getName();
 		Log.v(logTag, "Adding row for logger " + name);
 		Level level = logger.getLevel();
-		
+
 		Integer levelInt = (level == null) ? NO_LEVEL : level.levelInt;
 
 		// We use an integer instead of a boolean because it's standard
@@ -251,27 +243,32 @@ public class LogbackContentProvider extends ContentProvider {
 
 		List<Appender<ILoggingEvent>> attachedAppenders = Loggers
 				.getAttachedAppenders(logger);
-		String[] attachedAppenderNames = new String[attachedAppenders.size()];
-		for (int i = 0; i < attachedAppenderNames.length; i++) {
-			attachedAppenderNames[i] = attachedAppenders.get(i).getName();
+
+		StringBuilder sb = new StringBuilder();
+		for (int i = 0; i < attachedAppenders.size(); i++) {
+			sb.append(attachedAppenders.get(i).getName()).append(',');
 		}
 
-		Object[] fields = { name, levelInt, additivityInt,
-				attachedAppenderNames };
+		// Delete the last comma
+		if(sb.length() > 0) {
+			sb.deleteCharAt(sb.length() - 1);
+		}
+
+		Object[] fields = { name, levelInt, additivityInt, sb.toString() };
 		return fields;
 	}
 
 	@Override
 	public String getType(Uri uri) {
-		switch (LogbackContentProvider.URI_MATCHER.match(uri)) {
+		switch (LauiContentProvider.URI_MATCHER.match(uri)) {
 		case SINGLE_LOGGER:
-			return LogbackContentProvider.LoggerTable.MIME_TYPE_SINGLE;
+			return LauiContentProvider.LoggerTable.MIME_TYPE_SINGLE;
 		case MULTIPLE_LOGGERS:
-			return LogbackContentProvider.LoggerTable.MIME_TYPE_MULTIPLE;
+			return LauiContentProvider.LoggerTable.MIME_TYPE_MULTIPLE;
 		case SINGLE_APPENDER:
-			return LogbackContentProvider.AppenderTable.MIME_TYPE_SINGLE;
+			return LauiContentProvider.AppenderTable.MIME_TYPE_SINGLE;
 		case MULTIPLE_APPENDERS:
-			return LogbackContentProvider.AppenderTable.MIME_TYPE_MULTIPLE;
+			return LauiContentProvider.AppenderTable.MIME_TYPE_MULTIPLE;
 		default:
 			return null;
 		}
@@ -302,13 +299,29 @@ public class LogbackContentProvider extends ContentProvider {
 	 * to indicate whether one or multiple loggers are to be edited. If only one
 	 * logger is to be edited, put its name in the selection argument. If
 	 * multiple loggers are to be edited, put all of their names in the
-	 * selectionArgs argument. The ContentValues argument should have a key and
-	 * a value indicating the new level and/or appender for the given logger(s).
-	 * Use the LEVEL_KEY and APPENDER_KEY constants provided by this class as
-	 * keys for putting information into a ContentValues object. The value of
-	 * levels should be indicated by the integer constants in the Logback Level
-	 * class. Appender values should be indicated by a String holding their
-	 * name.
+	 * selectionArgs argument.
+	 * <p>
+	 * The ContentValues argument should have a key and a value indicating the
+	 * new level and/or appender for the given logger(s). Use the LEVEL_KEY and
+	 * APPENDER_KEY constants provided by this class as keys for putting
+	 * information into a ContentValues object. The value of levels should be
+	 * indicated by the integer constants in the Logback Level class. To set a
+	 * logger's level to null, use the NO_LEVEL constant provided by this class.
+	 * <p>
+	 * Appender values should be indicated by a String holding their name. If
+	 * there are multiple appenders to update, the String should be comma
+	 * delimited (ex. Foo,Bar,Baz). Spaces may be put between the names if
+	 * desired. <b>The logger(s) will be updated to have only the specified
+	 * Appenders attached.</b> This means that if a Logger has the Appenders Foo
+	 * and Bar attached to it and the only Appender specified in the
+	 * ContentValues is Baz, then the Appenders Foo and Bar will be removed from
+	 * the Logger and Baz will be attached to it. If the desired effect is to
+	 * add Baz to the Logger and leave its other Appenders attached, the String
+	 * should be some permutation of "Foo,Bar,Baz".
+	 * <p>
+	 * If the Appenders are specified such that the logger will have the same
+	 * Appenders as its nearest non-additive ancestor, then its additivity will
+	 * be set to true. Otherwise, its additivity will be set to false.
 	 */
 	@Override
 	public int update(Uri uri, ContentValues values, String selection,
@@ -341,6 +354,7 @@ public class LogbackContentProvider extends ContentProvider {
 
 		if (logger == null)
 			return isUpdate;
+
 		if (levelInt != null)
 			isUpdate |= updateLevel(logger, levelInt);
 		if (appenderStr != null)
@@ -349,25 +363,63 @@ public class LogbackContentProvider extends ContentProvider {
 		return isUpdate;
 	}
 
-	private static final Comparator<Appender<?>> APPENDER_COMPARATOR = new Comparator<Appender<?>>() {
-
-		@Override
-		public int compare(Appender<?> app1, Appender<?> app2) {
-			return app1.getName().compareTo(app2.getName());
-		}
-
-	};
-
-	// TODO: This method is not working (not complete)
 	private boolean updateAppender(Logger logger, String appenderStr) {
+		Loggers.clearAppenders(logger);
 
-		if (APPENDER_LIST.isEmpty())
+		List<Appender<ILoggingEvent>> appenderList = getAppenderList();
+		if (appenderList.isEmpty())
 			return false;
 
-		Collections.sort(APPENDER_LIST, APPENDER_COMPARATOR);
-		Collections.binarySearch(APPENDER_LIST, null, APPENDER_COMPARATOR);
-		return true;
+		String[] appenderNames = appenderStr.split(",");
+		Log.v(logTag, "Attaching appenders " + Arrays.toString(appenderNames)
+				+ " to Logger " + logger.getName());
 
+		for (String name : appenderNames) {
+			name = name.trim();
+			Appender<ILoggingEvent> found = findAppender(name, appenderList);
+			if (found == null) {
+				Log.w(logTag, "Appender " + name + " was not found, skipping");
+				continue;
+			}
+			logger.addAppender(found);
+		}
+
+		if (Loggers.hasSameAppendersAsParent(logger)) {
+			Log.d(logTag, "Setting additivity of Logger " + logger.getName()
+					+ " to false.");
+			logger.setAdditive(true);
+			Loggers.clearAppenders(logger);
+		} else {
+			logger.setAdditive(false);
+		}
+
+		return true;
+	}
+
+	private static Appender<ILoggingEvent> findAppender(String name,
+			List<Appender<ILoggingEvent>> appenderList) {
+		for (Appender<ILoggingEvent> a : appenderList) {
+			if (a.getName().equals(name))
+				return a;
+		}
+		return null;
+	}
+
+	private static List<Appender<ILoggingEvent>> getAppenderList() {
+		List<Appender<ILoggingEvent>> appenderList = new ArrayList<Appender<ILoggingEvent>>();
+		try {
+			// Joran provided a raw type so we don't really have a choice here
+			@SuppressWarnings("rawtypes")
+			Map appenderMap = AppenderStore.getAppenderMap();
+			for (Object o : appenderMap.values()) {
+				@SuppressWarnings("unchecked")
+				Appender<ILoggingEvent> a = (Appender<ILoggingEvent>) o;
+				appenderList.add(a);
+			}
+		} catch (IllegalStateException e) {
+			Log.e("LauiCp", "Unable to get a reference to the AppenderStore");
+		}
+		return appenderList;
 	}
 
 	/**
@@ -381,29 +433,43 @@ public class LogbackContentProvider extends ContentProvider {
 	 */
 	private boolean updateLevel(Logger logger, Integer levelInt) {
 
+		final String levelName;
+
 		switch (levelInt.intValue()) {
+		case NO_LEVEL:
+			logger.setLevel(null);
+			levelName = "null";
+			break;
 		case Level.TRACE_INT:
 			logger.setLevel(Level.TRACE);
+			levelName = Level.TRACE.toString();
 			break;
 		case Level.DEBUG_INT:
 			logger.setLevel(Level.DEBUG);
+			levelName = Level.DEBUG.toString();
 			break;
 		case Level.INFO_INT:
 			logger.setLevel(Level.INFO);
+			levelName = Level.INFO.toString();
 			break;
 		case Level.WARN_INT:
 			logger.setLevel(Level.WARN);
+			levelName = Level.WARN.toString();
 			break;
 		case Level.ERROR_INT:
 			logger.setLevel(Level.ERROR);
+			levelName = Level.ERROR.toString();
 			break;
 		case Level.OFF_INT:
 			logger.setLevel(Level.OFF);
+			levelName = Level.OFF.toString();
 			break;
 		default:
+			Log.e(logTag, "Unable to match against level of int " + levelInt);
 			return false;
 		}
 
+		Log.v(logTag, "Updated " + logger.getName() + " to level " + levelName);
 		return true;
 
 	}

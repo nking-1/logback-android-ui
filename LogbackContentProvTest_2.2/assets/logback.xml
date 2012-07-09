@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- By default encoders are assigned the type ch.qos.logback.classic.encoder.PatternLayoutEncoder 
+	see http://logback.qos.ch/manual/layouts.html -->
+<configuration>
+
+	<!-- This new rule causes joran to record each new appender into the appender 
+		store. The store is used to display the appenders. -->
+    <newRule pattern="configuration/appender"
+              actionClass="edu.vu.isis.logger.lib.AppenderStoreAction"/>
+
+	<property name="LOG_DIR" value="/mnt/sdcard" />
+
+	<appender name="LOGCAT" class="ch.qos.logback.classic.android.LogcatAppender">
+		<checkLoggable>false</checkLoggable>
+		<tagEncoder>
+			<pattern>laui.%logger{22}</pattern>
+		</tagEncoder>
+		<encoder>
+			<pattern>[%method] %msg%n</pattern>
+		</encoder>
+	</appender>
+
+	<appender name="STATS" class="ch.qos.logback.core.FileAppender">
+		<file>${LOG_DIR}/laui-perf.log</file>
+		<append>true</append>
+		<encoder>
+			<!-- <pattern>%-4relative [%thread] %-5level %logger{35} - %msg%n</pattern> -->
+			<!-- output: elapsed time , logger name and message -->
+			<pattern>%.-1level %10relative %-20logger{35} - %msg%n</pattern>
+			<outputPatternAsHeader>true</outputPatternAsHeader>
+		</encoder>
+	</appender>
+
+
+	<root level="WARN">
+		<appender-ref ref="LOGCAT" />
+	</root>
+
+</configuration>

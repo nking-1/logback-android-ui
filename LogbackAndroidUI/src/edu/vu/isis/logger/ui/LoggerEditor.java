@@ -1,28 +1,30 @@
 package edu.vu.isis.logger.ui;
 
-import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileNotFoundException;
-import java.io.IOException;
 import java.io.InputStream;
-import java.io.ObjectInputStream;
-import java.io.OptionalDataException;
 import java.io.PrintStream;
-import java.io.StreamCorruptedException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.Formatter;
 
 import org.slf4j.LoggerFactory;
 
 import android.app.Dialog;
 import android.app.ListActivity;
 import android.content.BroadcastReceiver;
+import android.content.ContentUris;
+import android.content.ContentValues;
 import android.content.Context;
+import android.content.DialogInterface;
+import android.content.DialogInterface.OnDismissListener;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.database.Cursor;
@@ -35,10 +37,12 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
+import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ListView;
+import android.widget.ScrollView;
 import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -67,11 +71,9 @@ public class LoggerEditor extends ListActivity {
 
 	private static final int READ_MENU = Menu.NONE + 0;
 	private static final int TOGGLE_APPENDER_TEXT_MENU = Menu.NONE + 1;
-	private static final int RESET_APPENDERS_MENU = Menu.NONE + 2;
 	private static final int LOAD_CONFIGURATION_MENU = Menu.NONE + 3;
 	private static final int SAVE_CONFIGURATION_MENU = Menu.NONE + 4;
 
-	private static final int APPENDER_REQUEST_CODE = 0;
 	private static final int PICKFILE_REQUEST_CODE = 1;
 
 	private static final String DEFAULT_SAVE_DIRECTORY = "/logger/save";
@@ -96,11 +98,9 @@ public class LoggerEditor extends ListActivity {
 	// LoggerHolders.
 	private Map<String, LoggerHolder> loggerMap = new HashMap<String, LoggerHolder>();
 
-	private LoggerHolder rootHolder;
-	// TODO: Appender lists need to work with content providers
-	private final List<String> availableAppenders = new ArrayList<String>();
+	private List<AppenderHolder> appenderList = new ArrayList<AppenderHolder>();
 
-	private final String[] appenderNames = new String[availableAppenders.size()];
+	private LoggerHolder rootLogger;
 
 	private AtomicBoolean showAppenderText = new AtomicBoolean(true);
 
@@ -110,6 +110,7 @@ public class LoggerEditor extends ListActivity {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.logger_editor);
 
+		// Query the Content Provider for the logger list
 		Cursor cursor = getContentResolver().query(
 				CpConstants.LoggerTable.CONTENT_URI, null, null, null, null);
 		List<LoggerHolder> tempList = new ArrayList<LoggerHolder>();
@@ -123,16 +124,16 @@ public class LoggerEditor extends ListActivity {
 						.getColumnIndexOrThrow(CpConstants.LoggerTable.LEVEL_INT);
 				final int additivityIndex = cursor
 						.getColumnIndexOrThrow(CpConstants.LoggerTable.ADDITIVITY);
-				final int attachedIndex = cursor
+				final int appenderIndex = cursor
 						.getColumnIndexOrThrow(CpConstants.LoggerTable.ATTACHED_APPENDER_NAMES);
 
 				final String name = cursor.getString(nameIndex);
 				final int levelInt = cursor.getInt(levelIndex);
 				final boolean additivity = cursor.getInt(additivityIndex) == 1;
 
-				// TODO: Quit cheating and actually get the appender names
-				final String[] attachedNames = new String[1];
-				attachedNames[0] = "Logcat";
+				String rawAppenderNames = cursor.getString(appenderIndex);
+				final String[] attachedNames = (rawAppenderNames == null) ? new String[0]
+						: rawAppenderNames.split(",");
 
 				LoggerHolder logger = new LoggerHolder();
 				logger.name = name;
@@ -156,8 +157,29 @@ public class LoggerEditor extends ListActivity {
 				tempList.add(logger);
 
 				if (logger.name.equals(Logger.ROOT_LOGGER_NAME)) {
-					rootHolder = logger;
+					rootLogger = logger;
 				}
+
+			}
+		}
+
+		// Query the Content Provider for the Appender list
+		cursor = getContentResolver().query(
+				CpConstants.AppenderTable.CONTENT_URI, null, null, null, null);
+
+		if (cursor != null && cursor.getCount() >= 1) {
+			while (cursor.moveToNext()) {
+
+				final int nameIndex = cursor
+						.getColumnIndex(CpConstants.AppenderTable.NAME);
+				final int filepathIndex = cursor
+						.getColumnIndex(CpConstants.AppenderTable.FILE_PATH_STRING);
+
+				AppenderHolder appender = new AppenderHolder();
+				appender.name = cursor.getString(nameIndex);
+				appender.filepath = cursor.getString(filepathIndex);
+
+				appenderList.add(appender);
 
 			}
 		}
@@ -246,18 +268,18 @@ public class LoggerEditor extends ListActivity {
 		// found.
 		// We make sure to initialize all of the fields so we don't accidentally
 		// get a null pointer exception
-		if (rootHolder == null) {
-			rootHolder = new LoggerHolder();
-			rootHolder.name = "ROOT_NOT_FOUND";
-			rootHolder.levelInt = Level.OFF_INT;
-			rootHolder.appenders = new ArrayList<String>();
+		if (rootLogger == null) {
+			rootLogger = new LoggerHolder();
+			rootLogger.name = "ROOT_NOT_FOUND";
+			rootLogger.levelInt = Level.OFF_INT;
+			rootLogger.appenders = new ArrayList<String>();
 		}
 
-		final Tree<LoggerHolder> mTree = Tree.newInstance(rootHolder);
+		final Tree<LoggerHolder> mTree = Tree.newInstance(rootLogger);
 
 		for (final LoggerHolder logger : collection) {
 			// The root was already added so we skip it
-			if (logger == rootHolder) {
+			if (logger == rootLogger) {
 				continue;
 			}
 			safelyAddLeaf(mTree, logger);
@@ -545,29 +567,27 @@ public class LoggerEditor extends ListActivity {
 		LinearLayout ll = (LinearLayout) dialog
 				.findViewById(R.id.log_viewer_dialog_file_appender_ll);
 
-		// TODO: Make this code work by getting the appenders from the content
-		// provider
-		/*
-		 * for (final Appender<ILoggingEvent> a : availableAppenders) { if (!(a
-		 * instanceof FileAppender)) continue; Button button = new Button(this);
-		 * button.setWidth(ViewGroup.LayoutParams.MATCH_PARENT);
-		 * button.setHeight(ViewGroup.LayoutParams.WRAP_CONTENT);
-		 * button.setText(a.getName()); button.setOnClickListener(new
-		 * View.OnClickListener() {
-		 * 
-		 * @Override public void onClick(View v) {
-		 * 
-		 * // TODO: Remove this toast once file reading works
-		 * Toast.makeText(LoggerEditor.this,
-		 * "File reading is not yet available", Toast.LENGTH_LONG).show();
-		 * return;
-		 * 
-		 * // Intent intent = new Intent().setClass(LoggerEditor.this, //
-		 * FileLogViewer.class); // intent.putExtra(LogViewerBase.EXTRA_NAME, //
-		 * ((FileAppender<ILoggingEvent>) a).getFile()); //
-		 * startActivity(intent); // dialog.dismiss(); } }); ll.addView(button);
-		 * }
-		 */
+		for (final AppenderHolder a : appenderList) {
+			if (!(a.hasFilepath()))
+				continue;
+			Button button = new Button(this);
+			button.setWidth(ViewGroup.LayoutParams.MATCH_PARENT);
+			button.setHeight(ViewGroup.LayoutParams.WRAP_CONTENT);
+			button.setText(a.name);
+			button.setOnClickListener(new View.OnClickListener() {
+
+				@Override
+				public void onClick(View v) {
+
+					Intent intent = new Intent().setClass(LoggerEditor.this,
+							FileLogViewer.class);
+					intent.putExtra(LogViewerBase.EXTRA_NAME, a.filepath);
+					startActivity(intent);
+					dialog.dismiss();
+				}
+			});
+			ll.addView(button);
+		}
 
 		dialog.show();
 
@@ -582,7 +602,7 @@ public class LoggerEditor extends ListActivity {
 	private void updateIcon(Level lvl, View row) {
 		final ImageView iv = (ImageView) (row.findViewById(R.id.logger_icon));
 
-		if (selectedLogger.levelInt == LoggerHolder.NO_LEVEL) {
+		if (selectedLogger.levelInt == CpConstants.NO_LEVEL) {
 			setEffectiveIcon(lvl, iv);
 		} else {
 			setActualIcon(lvl, iv);
@@ -695,7 +715,7 @@ public class LoggerEditor extends ListActivity {
 
 			holder.tv.setText(txtBldr.toString());
 
-			if (logger.levelInt == LoggerHolder.NO_LEVEL) {
+			if (logger.levelInt == CpConstants.NO_LEVEL) {
 				holder.tv.setTextAppearance(parent,
 						R.style.unselected_logger_font);
 				parent.setEffectiveIcon(logger.getEffectiveLevel(),
@@ -706,7 +726,7 @@ public class LoggerEditor extends ListActivity {
 				parent.setActualIcon(logger.getEffectiveLevel(), holder.levelIV);
 			}
 
-			if (logger == rootHolder) {
+			if (logger == rootLogger) {
 				holder.appenderIV
 						.setImageResource(R.drawable.appender_attached_icon);
 			} else if (!logger.additivity) {
@@ -720,50 +740,19 @@ public class LoggerEditor extends ListActivity {
 		}
 
 		/**
-		 * Returns a String assuming that all Loggers do not have additivity
-		 * enabled for Appenders. This means that there are no longer two
-		 * different categories of Appenders (attached and effective), so the
-		 * String can express the Appenders affecting a Logger in a more terse
-		 * way.
-		 */
-		@SuppressWarnings("unused")
-		private String getTerseAppenderString(LoggerHolder aLogger) {
-
-			StringBuilder nameBldr = new StringBuilder("[ Appenders: ");
-
-			if (aLogger.appenders.isEmpty()) {
-				nameBldr.append("none ");
-			} else {
-				for (String appenderName : aLogger.appenders) {
-					nameBldr.append(appenderName).append(" ");
-				}
-			}
-
-			nameBldr.append(']');
-			return nameBldr.toString();
-
-		}
-
-		/**
 		 * Makes a String indicating both the attached and inherited Appenders.
 		 */
 		private String getAllAppenderString(final LoggerHolder aLogger) {
 
-			// TODO Implement this again; for now we are just directing it to
-			// display only the appenders directly attached to the logger
-			return getTerseAppenderString(aLogger);
+			final StringBuilder nameBldr = new StringBuilder();
+			nameBldr.append(" [ ");
+			final List<String> effectiveList = aLogger.getEffectiveAppenders();
 
-			/*
-			 * final StringBuilder nameBldr = new StringBuilder();
-			 * nameBldr.append(" [ "); final List<Appender<ILoggingEvent>>
-			 * effectiveList = Loggers .getEffectiveAppenders(aLogger);
-			 * 
-			 * if (effectiveList.isEmpty()) { nameBldr.append("none "); } else {
-			 * for (Appender<ILoggingEvent> app : effectiveList) {
-			 * nameBldr.append(app.getName()).append(" "); } }
-			 * 
-			 * return nameBldr.append(" ]").toString();
-			 */
+			for (String str : effectiveList) {
+				nameBldr.append(str).append(" ");
+			}
+
+			return nameBldr.append("]").toString();
 
 		}
 
@@ -773,29 +762,81 @@ public class LoggerEditor extends ListActivity {
 	// row.setBackgroundColor(color);
 	// }
 
-	/**
-	 * Get the appenders for the selected logger (matches current view) The
-	 * selected logger is passed to the AppenderSelector.
-	 * 
-	 * @param v
-	 *            unused
-	 */
 	public void configureAppenders(View v) {
 
-		// TODO: It shouldn't be necessary to start a new activity anymore.
-		// We should try using a dialog. That way we won't have to implement
-		// Parcelable or do any ugly serialization with the logger holder
+		if (selectedLogger == null) {
+			Toast.makeText(this, "Please select a Logger first",
+					Toast.LENGTH_SHORT);
+		}
 
-		/*
-		 * if (this.selectedLogger != null) { final Intent intent = new
-		 * Intent().putExtra(
-		 * "edu.vu.isis.ammo.core.ui.LoggerEditor.selectedLogger",
-		 * selectedLogger).setClass(this, AppenderSelector.class);
-		 * 
-		 * startActivityForResult(intent, 0); } else { Toast.makeText(this,
-		 * "Pick a logger before trying to configure its appenders.", 0).show();
-		 * }
-		 */
+		final Dialog dialog = new Dialog(this);
+		dialog.setTitle("Appender configuration");
+		dialog.setContentView(R.layout.appender_selector_dialog);
+
+		TextView tv = (TextView) dialog
+				.findViewById(R.id.appender_selector_message);
+		String message = "Configuring appenders for logger "
+				+ selectedLogger.name + "  Close dialog to save changes.";
+		tv.setText(message);
+
+		final LinearLayout layout = (LinearLayout) dialog.findViewById(R.id.appender_layout);
+
+		for (AppenderHolder a : appenderList) {
+			CheckBox cb = new CheckBox(this);
+			cb.setText(a.name);
+			cb.setWidth(ViewGroup.LayoutParams.MATCH_PARENT);
+			cb.setHeight(ViewGroup.LayoutParams.WRAP_CONTENT);
+			cb.setTag(a);
+			
+			cb.setChecked(selectedLogger.appenders.contains(a.name));
+			
+			layout.addView(cb);
+		}
+
+		dialog.setOnDismissListener(new OnDismissListener() {
+
+			LoggerEditor parent = LoggerEditor.this;
+
+			// We actually apply the changes to the appenders on the logger
+			// when the dialog is dismissed
+			@Override
+			public void onDismiss(DialogInterface dialog) {
+				StringBuilder sb = new StringBuilder();
+
+				for (AppenderHolder a : appenderList) {
+					CheckBox cb = (CheckBox) layout.findViewWithTag(a);
+					if (cb.isChecked())
+						sb.append(a.name).append(",");
+				}
+
+				// Delete the trailing comma
+				if (sb.length() > 0) {
+					sb.deleteCharAt(sb.length() - 1);
+				}
+
+				Uri updateUri = ContentUris.withAppendedId(
+						CpConstants.LoggerTable.CONTENT_URI, 0);
+				ContentValues values = new ContentValues();
+				values.put(CpConstants.APPENDER_KEY, sb.toString());
+				parent.getContentResolver().update(updateUri, values,
+						selectedLogger.name, null);
+
+				LoggerHolder parentLogger = loggerMap.get(Loggers
+						.getParentLoggerName(selectedLogger.name));
+
+				// We have to sort the selected logger's appender list to obey
+				// the contract of the List equals method. The effective
+				// appender list we get is already sorted for us.
+				Collections.sort(selectedLogger.appenders);
+				selectedLogger.additivity = selectedLogger.appenders
+						.equals(parentLogger.getEffectiveAppenders());
+				
+				parent.mListView.invalidateViews();
+			}
+
+		});
+
+		dialog.show();
 
 	}
 
@@ -804,27 +845,6 @@ public class LoggerEditor extends ListActivity {
 			Intent outputIntent) {
 
 		switch (requestCode) {
-
-		// TODO: Appender request code stuff should probably be deleted.
-
-		// case APPENDER_REQUEST_CODE:
-		// /*
-		// * Determine if appenders match the parent. Additivity is used as
-		// * the "effective v. actual" indicator.
-		// */
-		// if (this.selectedLogger == Loggers.ROOT_LOGGER) {
-		// refreshList();
-		// return;
-		// }
-		//
-		// if (Loggers.hasSameAppendersAsParent(this.selectedLogger)) {
-		// this.selectedLogger.setAdditive(true);
-		// Loggers.clearAppenders(this.selectedLogger);
-		// } else {
-		// this.selectedLogger.setAdditive(false);
-		// }
-		// refreshList();
-		// break;
 
 		case PICKFILE_REQUEST_CODE:
 			if (outputIntent == null || outputIntent.getData() == null)
@@ -950,21 +970,39 @@ public class LoggerEditor extends ListActivity {
 				break;
 			case CLEAR_IX:
 			default:
-				if (selectedLogger.equals(Loggers.ROOT_LOGGER)) {
+				if (selectedLogger == rootLogger) {
 					Toast.makeText(parent,
 							"Clearing the root logger is not allowed",
 							Toast.LENGTH_LONG).show();
 					return;
 				}
-				nextLevelInt = LoggerHolder.NO_LEVEL;
+				nextLevelInt = CpConstants.NO_LEVEL;
 			}
 
 			parent.selectedLogger.levelInt = nextLevelInt;
 
+			Uri updateUri = ContentUris.withAppendedId(
+					CpConstants.LoggerTable.CONTENT_URI, 0);
+			ContentValues levelValues = new ContentValues();
+			levelValues.put(CpConstants.LEVEL_KEY, nextLevelInt);
+
+			final int numUpdates = getContentResolver().update(updateUri,
+					levelValues, parent.selectedLogger.name, null);
+			personalLogger.debug("Updated {} rows", numUpdates);
+
+			if (numUpdates == 0) {
+				Toast.makeText(
+						parent,
+						"The logger " + selectedLogger.name
+								+ " was unable to be updated.",
+						Toast.LENGTH_LONG).show();
+				return;
+			}
+
 			// We want to use the effective level for the icon if the
 			// Logger's level is null
 			updateIcon(
-					(nextLevelInt == LoggerHolder.NO_LEVEL) ? parent.selectedLogger.getEffectiveLevel()
+					(nextLevelInt == CpConstants.NO_LEVEL) ? parent.selectedLogger.getEffectiveLevel()
 							: Level.toLevel(nextLevelInt, Level.DEBUG),
 					parent.selectedView);
 
@@ -974,17 +1012,19 @@ public class LoggerEditor extends ListActivity {
 
 	protected class LoggerHolder {
 
-		public static final int NO_LEVEL = -152;
-
-		int levelInt = NO_LEVEL;
+		int levelInt = CpConstants.NO_LEVEL;
 		boolean additivity;
 		String name;
 		List<String> appenders;
 
 		public Level getEffectiveLevel() {
-
-			if (levelInt != NO_LEVEL)
+			if (levelInt != CpConstants.NO_LEVEL) {
 				return Level.toLevel(levelInt);
+			}
+
+			if (this == rootLogger) {
+				return Level.toLevel(levelInt);
+			}
 
 			final String parentName = Loggers.getParentLoggerName(name);
 			final LoggerHolder parent = loggerMap.get(parentName);
@@ -999,7 +1039,43 @@ public class LoggerEditor extends ListActivity {
 			}
 
 			return parent.getEffectiveLevel();
+		}
 
+		/**
+		 * @return an alphabetically sorted list of Appenders attached to the
+		 *         LoggerHolder
+		 */
+		public List<String> getEffectiveAppenders() {
+			Set<String> set = getEffectiveAppenders(new HashSet<String>());
+			List<String> list = new ArrayList<String>();
+			for (String str : set) {
+				list.add(str);
+			}
+			Collections.sort(list);
+			return list;
+		}
+
+		private Set<String> getEffectiveAppenders(Set<String> soFar) {
+			soFar.addAll(appenders);
+
+			if (additivity == false || this == rootLogger) {
+				return soFar;
+			} else {
+				String parentName = Loggers.getParentLoggerName(name);
+				LoggerHolder parent = loggerMap.get(parentName);
+				return parent.getEffectiveAppenders(soFar);
+			}
+		}
+
+	}
+
+	protected class AppenderHolder {
+
+		String name;
+		String filepath;
+
+		public boolean hasFilepath() {
+			return filepath != null;
 		}
 
 	}

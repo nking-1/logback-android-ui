@@ -31,7 +31,7 @@ public class AppenderSelector extends Activity {
 	public void onCreate(Bundle savedInstanceState) {
 
 		super.onCreate(savedInstanceState);
-		setContentView(R.layout.appender_selector);
+//		setContentView(R.layout.appender_selector);
 
 		selectedLogger = (Logger) getIntent().getSerializableExtra(
 				"edu.vu.isis.ammo.core.ui.LoggerEditor.selectedLogger");
