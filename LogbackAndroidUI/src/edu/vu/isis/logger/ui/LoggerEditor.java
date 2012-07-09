@@ -11,6 +11,7 @@ import java.io.PrintStream;
 import java.io.StreamCorruptedException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -111,6 +112,7 @@ public class LoggerEditor extends ListActivity {
 
 		Cursor cursor = getContentResolver().query(
 				CpConstants.LoggerTable.CONTENT_URI, null, null, null, null);
+		List<LoggerHolder> tempList = new ArrayList<LoggerHolder>();
 
 		if (cursor != null && cursor.getCount() >= 1) {
 			while (cursor.moveToNext()) {
@@ -127,7 +129,7 @@ public class LoggerEditor extends ListActivity {
 				final String name = cursor.getString(nameIndex);
 				final int levelInt = cursor.getInt(levelIndex);
 				final boolean additivity = cursor.getInt(additivityIndex) == 1;
-				
+
 				// TODO: Quit cheating and actually get the appender names
 				final String[] attachedNames = new String[1];
 				attachedNames[0] = "Logcat";
@@ -144,14 +146,23 @@ public class LoggerEditor extends ListActivity {
 
 				loggerMap.put(logger.name, logger);
 
-				if (logger.name.equals(Loggers.ROOT_LOGGER)) {
+				/*
+				 * To keep from wasting time building a list from the Collection
+				 * of values in the Map and then sorting it ourselves, we just
+				 * make a list of loggers along with the map. The content
+				 * provider originally got the list of loggers from Logback, and
+				 * Logback sorted the list before returning it.
+				 */
+				tempList.add(logger);
+
+				if (logger.name.equals(Logger.ROOT_LOGGER_NAME)) {
 					rootHolder = logger;
 				}
 
 			}
 		}
 
-		this.loggerTree = makeTree(loggerMap.values());
+		this.loggerTree = makeTree(tempList);
 
 		this.mListView = super.getListView();
 

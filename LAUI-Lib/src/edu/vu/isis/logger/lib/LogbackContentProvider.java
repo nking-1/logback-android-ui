@@ -11,10 +11,12 @@ import org.slf4j.LoggerFactory;
 import android.content.ContentProvider;
 import android.content.ContentValues;
 import android.content.UriMatcher;
+import android.content.res.Resources;
 import android.database.Cursor;
 import android.database.MatrixCursor;
 import android.net.Uri;
 import android.provider.BaseColumns;
+import android.util.Log;
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.LoggerContext;
@@ -89,12 +91,15 @@ public class LogbackContentProvider extends ContentProvider {
 	private static UriMatcher URI_MATCHER;
 	public static final Uri OP_NOT_SUPPORTED = Uri
 			.parse("That operation is not supported");
+	
+	/** Indicates a null level on a logger */
+	private static final int NO_LEVEL = -152;
 
 	private static final LoggerContext LOGGER_CONTEXT = (LoggerContext) LoggerFactory
 			.getILoggerFactory();
-	private static final List<Logger> LOGGER_LIST = LOGGER_CONTEXT
-			.getLoggerList();
 	private static final List<Appender<ILoggingEvent>> APPENDER_LIST = new ArrayList<Appender<ILoggingEvent>>();
+
+	private String logTag;
 
 	// Fill the appender list
 	static {
@@ -135,35 +140,67 @@ public class LogbackContentProvider extends ContentProvider {
 		// TODO Auto-generated method stub
 		// Try broadcasting an intent which an intent filter in the
 		// LAUI app will catch
+
+		// Since multiple apps might be using this library, we get the
+		// application name so we can tag our logs without being ambiguous.
+		final Resources resources = getContext().getResources();
+		if (resources != null) {
+			CharSequence appName = resources.getText(resources.getIdentifier(
+					"app_name", "string", getContext().getPackageName()));
+			logTag = (appName == null) ? "LauiCp" : appName + "_LauiCp";
+		} else {
+			logTag = "LauiCp";
+		}
+
 		return true;
 	}
 
 	@Override
 	public Cursor query(Uri uri, String[] projection, String selection,
 			String[] selectionArgs, String sortOrder) {
+
 		final MatrixCursor cursor;
 		switch (LogbackContentProvider.URI_MATCHER.match(uri)) {
 
 		case SINGLE_LOGGER:
+			
+		{
+			Log.i(logTag, "Got a query for a single logger");
 			cursor = new MatrixCursor(
 					LogbackContentProvider.LoggerTable.COLUMN_NAMES, 1);
 			final int whichLogger = Integer.parseInt(uri.getPathSegments().get(
 					1));
-			Logger selectedLogger = LogbackContentProvider.LOGGER_LIST
-					.get(whichLogger);
+			
+			final List<Logger> loggerList = LOGGER_CONTEXT.getLoggerList();
+			if(whichLogger > loggerList.size()-1) {
+				Log.e(logTag, "Got request for logger #" + whichLogger +
+						" but there are only " + loggerList.size() +
+						" loggers.");
+				return null;
+			}
+			
+			Logger selectedLogger = loggerList.get(whichLogger);
 			cursor.addRow(makeLoggerRow(selectedLogger));
+		}
 			break;
 
 		case MULTIPLE_LOGGERS:
+			
+		{
+			Log.i(logTag, "Got a query for all loggers");
+			
+			final List<Logger> loggerList = LOGGER_CONTEXT.getLoggerList();
 			cursor = new MatrixCursor(
 					LogbackContentProvider.LoggerTable.COLUMN_NAMES,
-					LOGGER_LIST.size());
-			for (Logger logger : LOGGER_LIST) {
+					loggerList.size());
+			for (Logger logger : loggerList) {
 				cursor.addRow(makeLoggerRow(logger));
 			}
+		}
 			break;
 
 		case SINGLE_APPENDER:
+			Log.i(logTag, "Got a query for a single appender");
 			cursor = new MatrixCursor(
 					LogbackContentProvider.AppenderTable.COLUMN_NAMES, 1);
 			final int whichAppender = Integer.parseInt(uri.getPathSegments()
@@ -174,6 +211,7 @@ public class LogbackContentProvider extends ContentProvider {
 			break;
 
 		case MULTIPLE_APPENDERS:
+			Log.i(logTag, "Got a query for all appenders");
 			cursor = new MatrixCursor(
 					LogbackContentProvider.AppenderTable.COLUMN_NAMES,
 					LogbackContentProvider.APPENDER_LIST.size());
@@ -183,6 +221,7 @@ public class LogbackContentProvider extends ContentProvider {
 			break;
 
 		default:
+			Log.i(logTag, "Could not match Uri for query");
 			cursor = null;
 
 		}
@@ -201,8 +240,11 @@ public class LogbackContentProvider extends ContentProvider {
 
 	private Object[] makeLoggerRow(Logger logger) {
 		String name = logger.getName();
-		Integer levelInt = logger.getLevel().levelInt;
+		Log.v(logTag, "Adding row for logger " + name);
+		Level level = logger.getLevel();
 		
+		Integer levelInt = (level == null) ? NO_LEVEL : level.levelInt;
+
 		// We use an integer instead of a boolean because it's standard
 		// SQLite style to do so
 		int additivityInt = logger.isAdditive() ? 1 : 0;
