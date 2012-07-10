@@ -10,6 +10,8 @@ import java.util.List;
 
 import org.slf4j.LoggerFactory;
 
+import android.util.Log;
+
 import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.Appender;
@@ -19,12 +21,12 @@ import ch.qos.logback.core.Appender;
  * Logback loggers.
  * 
  * @author Nick King
- *
+ * 
  */
 public final class Loggers {
 
 	public static final Logger ROOT_LOGGER = getLoggerByName(Logger.ROOT_LOGGER_NAME);
-	
+
 	private static final Comparator<Appender<?>> APPENDER_COMPARATOR = new Comparator<Appender<?>>() {
 
 		@Override
@@ -33,26 +35,26 @@ public final class Loggers {
 		}
 
 	};
-	
+
 	// Suppress default constructor to prevent instantiation
 	// (See Item 4 in Effective Java, Second Edition)
-	private Loggers() { }
-	
-	
+	private Loggers() {
+	}
+
 	/**
-	 * Returns a Logback Logger that has the given name.  This method is simply
-	 * a wrapper of the LoggerFactory.getLogger(String name) method.
-	 * However, it hides an ugly type cast that results from
-	 * the Logback Logger class implementing the slf4j Logger interface.
+	 * Returns a Logback Logger that has the given name. This method is simply a
+	 * wrapper of the LoggerFactory.getLogger(String name) method. However, it
+	 * hides an ugly type cast that results from the Logback Logger class
+	 * implementing the slf4j Logger interface.
 	 * 
-	 * @param name -- the name of the Logger to retrieve
+	 * @param name
+	 *            -- the name of the Logger to retrieve
 	 * @return -- the Logger whose name was given
 	 */
 	public static Logger getLoggerByName(final String name) {
 		return (Logger) LoggerFactory.getLogger(name);
 	}
-	
-	
+
 	/**
 	 * Returns the parent Logger of the given Logger
 	 * 
@@ -63,7 +65,7 @@ public final class Loggers {
 	public static Logger getParentLogger(final Logger childLogger) {
 		return getLoggerByName(getParentLoggerName(childLogger));
 	}
-	
+
 	/**
 	 * Returns the name of the parent logger of the given logger
 	 * 
@@ -74,8 +76,7 @@ public final class Loggers {
 	public static String getParentLoggerName(final Logger childLogger) {
 		return getParentLoggerName(childLogger.getName());
 	}
-	
-	
+
 	/**
 	 * Returns the name of the parent logger of the given child logger name
 	 * 
@@ -86,15 +87,14 @@ public final class Loggers {
 	public static String getParentLoggerName(final String childName) {
 		final int lastDotIndex = childName.lastIndexOf('.');
 		final String parentLoggerName;
-		if(lastDotIndex == -1) {
+		if (lastDotIndex == -1) {
 			parentLoggerName = Logger.ROOT_LOGGER_NAME;
 		} else {
 			parentLoggerName = childName.substring(0, lastDotIndex);
 		}
 		return parentLoggerName;
 	}
-	
-	
+
 	/**
 	 * Determines whether a logger has an explicitly set level or if it is
 	 * inheriting its level from its parent logger(s).
@@ -106,30 +106,26 @@ public final class Loggers {
 	public static boolean isInheritingLevel(final Logger logger) {
 		return logger.getLevel() == null;
 	}
-	
-	
+
 	public static List<Logger> getChangedLoggers(final Tree<Logger> loggerTree) {
 		return findExplicitlySetLoggers(loggerTree, new ArrayList<Logger>());
 	}
-	
-	
+
 	private static List<Logger> findExplicitlySetLoggers(
 			final Tree<Logger> loggerTree, final List<Logger> loggerList) {
-		
+
 		final Logger logger = loggerTree.getPayload();
-		if (!Loggers.isInheritingLevel(logger)
-				|| !logger.isAdditive()) {
+		if (!Loggers.isInheritingLevel(logger) || !logger.isAdditive()) {
 			loggerList.add(logger);
 		}
-		
-		for(Tree<Logger> subTree : loggerTree.getSubTrees()) {
+
+		for (Tree<Logger> subTree : loggerTree.getSubTrees()) {
 			Loggers.findExplicitlySetLoggers(subTree, loggerList);
 		}
-		
+
 		return loggerList;
 	}
-	
-	
+
 	/**
 	 * Determines whether a logger has an attached Appender. Note that this
 	 * method only accounts for appenders explicitly attached to the logger;
@@ -137,7 +133,7 @@ public final class Loggers {
 	 * flag is set to true. For instance, in the case that a logger has no
 	 * appenders attached to it but its parent has two appenders attached, this
 	 * method would still return <b>false</b>.
-	 *
+	 * 
 	 * @param logger
 	 *            -- the logger to analyze
 	 * @return -- true if the logger has an Appender explicitly attached, false
@@ -146,8 +142,7 @@ public final class Loggers {
 	public static boolean hasAttachedAppender(final Logger logger) {
 		return logger.iteratorForAppenders().hasNext();
 	}
-	
-	
+
 	/**
 	 * Returns all appenders that the logger has explicitly attached to it. Note
 	 * that loggers inherit appenders from their parents if their additivity
@@ -162,21 +157,21 @@ public final class Loggers {
 	 */
 	public static List<Appender<ILoggingEvent>> getAttachedAppenders(
 			final Logger logger) {
-		
-		final Iterator<Appender<ILoggingEvent>> it = logger.iteratorForAppenders();
+
+		final Iterator<Appender<ILoggingEvent>> it = logger
+				.iteratorForAppenders();
 		final List<Appender<ILoggingEvent>> appenderList = new ArrayList<Appender<ILoggingEvent>>();
-		
-		while(it.hasNext()) {
+
+		while (it.hasNext()) {
 			appenderList.add(it.next());
 		}
-		
+
 		Collections.sort(appenderList, APPENDER_COMPARATOR);
-		
+
 		return appenderList;
-		
+
 	}
-	
-	
+
 	/**
 	 * Returns all appenders that currently affect the logger, including the
 	 * appenders that the logger is inheriting from its parents, if any.
@@ -191,16 +186,15 @@ public final class Loggers {
 			final Logger logger) {
 
 		final List<Appender<ILoggingEvent>> appenderList = new ArrayList<Appender<ILoggingEvent>>();
-		appenderList.addAll(0,
-				getAppenderSet(logger, new HashSet<Appender<ILoggingEvent>>()));
+		appenderList.addAll(getAppenderSet(logger,
+				new HashSet<Appender<ILoggingEvent>>()));
 
 		Collections.sort(appenderList, APPENDER_COMPARATOR);
-		
+
 		return appenderList;
 
 	}
 
-	
 	/**
 	 * We recursively step up through the Logger family until we either reach
 	 * the ROOT Logger or reach the closest Logger with its additivity flag set
@@ -220,8 +214,7 @@ public final class Loggers {
 		}
 
 	}
-	
-	
+
 	/**
 	 * Determines whether an Appender is <i>effectively</i> attached to a Logger
 	 * through inheritance. In other words, determines whether an Appender is
@@ -239,11 +232,10 @@ public final class Loggers {
 			Appender<ILoggingEvent> app) {
 		return getEffectiveAppenders(logger).contains(app);
 	}
-	
-	
+
 	/**
 	 * Determines whether a Logger has the same appenders <i>explicitly</i>
-	 * attached to it as its parent.  This method does not account for
+	 * attached to it as its parent. This method does not account for
 	 * additivity.
 	 * 
 	 * @param logger
@@ -254,20 +246,22 @@ public final class Loggers {
 		return getAttachedAppenders(logger).equals(
 				getAttachedAppenders(getParentLogger(logger)));
 	}
-	
+
 	/**
-	 * Determines whether a Logger has the same Appenders attached to it
-	 * as the Appenders that are affecting its parent.
+	 * Determines whether a Logger has the same Appenders attached to it as the
+	 * Appenders that are affecting its parent.
 	 * 
 	 * @param logger
 	 * @return
 	 */
 	public static boolean hasSameAppendersAsParent(Logger logger) {
-		return getAttachedAppenders(logger).equals(
-				getEffectiveAppenders(getParentLogger(logger)));
+		List<Appender<ILoggingEvent>> attached = getAttachedAppenders(logger);
+		List<Appender<ILoggingEvent>> effective = getEffectiveAppenders(getParentLogger(logger));
+		Log.v("Loggers.java", "Appenders attached to Logger " + logger.getName() + ": " + attached.toString());
+		Log.v("Loggers.java", "Effective Appenders on Logger " + getParentLogger(logger).getName() + ": " + effective.toString());
+		return attached.equals(effective);
 	}
-	
-	
+
 	/**
 	 * Sets the additivity flag for all loggers in the given Tree.
 	 * 
@@ -280,12 +274,11 @@ public final class Loggers {
 			boolean additive) {
 		final Logger headLogger = loggerTree.getPayload();
 		headLogger.setAdditive(additive);
-		for(Logger subLogger : loggerTree.getSuccessors(headLogger)) {
+		for (Logger subLogger : loggerTree.getSuccessors(headLogger)) {
 			setAdditivityForAll(loggerTree.getTree(subLogger), additive);
 		}
 	}
-	
-	
+
 	/**
 	 * Attaches a given Appender to all loggers in a Tree
 	 * 
@@ -298,12 +291,11 @@ public final class Loggers {
 			Appender<ILoggingEvent> app) {
 		final Logger headLogger = loggerTree.getPayload();
 		headLogger.addAppender(app);
-		for(Logger subLogger : loggerTree.getSuccessors(headLogger)) {
+		for (Logger subLogger : loggerTree.getSuccessors(headLogger)) {
 			addAppenderForAll(loggerTree.getTree(subLogger), app);
 		}
 	}
-	
-	
+
 	/**
 	 * Detaches a given Appender from all loggers in a Tree
 	 * 
@@ -316,12 +308,11 @@ public final class Loggers {
 			Appender<ILoggingEvent> app) {
 		final Logger headLogger = loggerTree.getPayload();
 		headLogger.detachAppender(app);
-		for(Logger subLogger : loggerTree.getSuccessors(headLogger)) {
+		for (Logger subLogger : loggerTree.getSuccessors(headLogger)) {
 			detachAppenderForAll(loggerTree.getTree(subLogger), app);
 		}
 	}
-	
-	
+
 	/**
 	 * Sets all loggers in a Tree to have the same attached Appender settings as
 	 * the Logger at the top of the Tree
@@ -333,9 +324,9 @@ public final class Loggers {
 
 		final Logger headLogger = loggerTree.getPayload();
 		final Collection<Appender<ILoggingEvent>> appenders = getAppendersInLoggerTree(loggerTree);
-		
-		for(Appender<ILoggingEvent> app : appenders) {
-			if(headLogger.isAttached(app)) {
+
+		for (Appender<ILoggingEvent> app : appenders) {
+			if (headLogger.isAttached(app)) {
 				addAppenderForAll(loggerTree, app);
 			} else {
 				detachAppenderForAll(loggerTree, app);
@@ -344,7 +335,6 @@ public final class Loggers {
 
 	}
 
-	
 	/**
 	 * Returns all appenders attached to any Logger in the Tree.
 	 * 
@@ -357,33 +347,30 @@ public final class Loggers {
 		return getAppendersInLoggerTree(loggerTree,
 				new HashSet<Appender<ILoggingEvent>>());
 	}
-	
-	
-	
+
 	private static Collection<Appender<ILoggingEvent>> getAppendersInLoggerTree(
 			final Tree<Logger> loggerTree,
 			final HashSet<Appender<ILoggingEvent>> soFar) {
 
 		final Logger headLogger = loggerTree.getPayload();
-		
+
 		for (Appender<ILoggingEvent> app : getAttachedAppenders(headLogger)) {
 			soFar.add(app);
 		}
-		
+
 		for (Logger subLogger : loggerTree.getSuccessors(headLogger)) {
 			getAppendersInLoggerTree(loggerTree.getTree(subLogger), soFar);
 		}
-		
+
 		return soFar;
 	}
 
-
 	public static void clearAppenders(Logger logger) {
 		Appender<ILoggingEvent> a = null;
-		for(Iterator<Appender<ILoggingEvent>> itr = logger.iteratorForAppenders(); itr.hasNext(); a = itr.next()) {
+		for (Iterator<Appender<ILoggingEvent>> itr = logger
+				.iteratorForAppenders(); itr.hasNext(); a = itr.next()) {
 			logger.detachAppender(a);
 		}
 	}
-	
-	
+
 }

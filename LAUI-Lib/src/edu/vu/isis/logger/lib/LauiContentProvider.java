@@ -2,9 +2,6 @@ package edu.vu.isis.logger.lib;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
@@ -370,26 +367,32 @@ public class LauiContentProvider extends ContentProvider {
 		if (appenderList.isEmpty())
 			return false;
 
-		String[] appenderNames = appenderStr.split(",");
-		Log.v(logTag, "Attaching appenders " + Arrays.toString(appenderNames)
-				+ " to Logger " + logger.getName());
-
-		for (String name : appenderNames) {
-			name = name.trim();
-			Appender<ILoggingEvent> found = findAppender(name, appenderList);
-			if (found == null) {
-				Log.w(logTag, "Appender " + name + " was not found, skipping");
-				continue;
+		if(appenderStr.equals("")) {
+			Log.i(logTag, "Got empty appender string, clearing appenders off Logger " + logger.getName());
+		} else {
+			String[] appenderNames = appenderStr.split(",");
+			Log.v(logTag, "Attaching appenders " + Arrays.toString(appenderNames)
+					+ " to Logger " + logger.getName());
+	
+			for (String name : appenderNames) {
+				name = name.trim();
+				Appender<ILoggingEvent> found = findAppender(name, appenderList);
+				if (found == null) {
+					Log.w(logTag, "Appender " + name + " was not found, skipping");
+					continue;
+				}
+				logger.addAppender(found);
 			}
-			logger.addAppender(found);
 		}
 
 		if (Loggers.hasSameAppendersAsParent(logger)) {
 			Log.d(logTag, "Setting additivity of Logger " + logger.getName()
-					+ " to false.");
+					+ " to true.");
 			logger.setAdditive(true);
 			Loggers.clearAppenders(logger);
 		} else {
+			Log.d(logTag, "Setting additivity of Logger " + logger.getName()
+					+ " to false.");
 			logger.setAdditive(false);
 		}
 

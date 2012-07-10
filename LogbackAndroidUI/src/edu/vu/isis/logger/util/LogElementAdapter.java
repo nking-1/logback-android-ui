@@ -2,9 +2,6 @@ package edu.vu.isis.logger.util;
 
 import java.util.List;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import android.content.Context;
 import android.view.View;
 import android.view.ViewGroup;
@@ -12,8 +9,6 @@ import android.widget.ArrayAdapter;
 import android.widget.TextView;
 
 public class LogElementAdapter extends ArrayAdapter<LogElement> {
-
-	private Logger logger = LoggerFactory.getLogger("ui.logger.adapter");
 	
 	private Context mContext;
 	private int maxNumLines = 0; // 0 means unlimited lines
@@ -27,8 +22,6 @@ public class LogElementAdapter extends ArrayAdapter<LogElement> {
 	
 	@Override
 	public View getView(int position, View convertView, ViewGroup parent) {
-		
-		logger.trace("Adding view for position {}", position);
 		
 		View view = super.getView(position, convertView, parent);
 		

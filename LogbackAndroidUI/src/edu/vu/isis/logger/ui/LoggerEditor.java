@@ -5,15 +5,16 @@ import java.io.FileNotFoundException;
 import java.io.InputStream;
 import java.io.PrintStream;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.Formatter;
 
 import org.slf4j.LoggerFactory;
 
@@ -42,7 +43,6 @@ import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ListView;
-import android.widget.ScrollView;
 import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -110,8 +110,33 @@ public class LoggerEditor extends ListActivity {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.logger_editor);
 
-		// Query the Content Provider for the logger list
+		// Query the Content Provider for the Appender list
 		Cursor cursor = getContentResolver().query(
+				CpConstants.AppenderTable.CONTENT_URI, null, null, null, null);
+
+		// We use this Map so that we can reference the same AppenderHolders
+		// each time we attach one to a LoggerHolder
+		Map<String, AppenderHolder> tempMap = new HashMap<String, AppenderHolder>();
+
+		if (cursor != null && cursor.getCount() >= 1) {
+			while (cursor.moveToNext()) {
+
+				final int nameIndex = cursor
+						.getColumnIndex(CpConstants.AppenderTable.NAME);
+				final int filepathIndex = cursor
+						.getColumnIndex(CpConstants.AppenderTable.FILE_PATH_STRING);
+
+				String name = cursor.getString(nameIndex);
+				AppenderHolder appender = new AppenderHolder(name);
+				appender.filepath = cursor.getString(filepathIndex);
+
+				appenderList.add(appender);
+				tempMap.put(appender.name, appender);
+			}
+		}
+
+		// Query the Content Provider for the logger list
+		cursor = getContentResolver().query(
 				CpConstants.LoggerTable.CONTENT_URI, null, null, null, null);
 		List<LoggerHolder> tempList = new ArrayList<LoggerHolder>();
 
@@ -127,59 +152,54 @@ public class LoggerEditor extends ListActivity {
 				final int appenderIndex = cursor
 						.getColumnIndexOrThrow(CpConstants.LoggerTable.ATTACHED_APPENDER_NAMES);
 
-				final String name = cursor.getString(nameIndex);
+				final String loggerName = cursor.getString(nameIndex);
 				final int levelInt = cursor.getInt(levelIndex);
 				final boolean additivity = cursor.getInt(additivityIndex) == 1;
 
 				String rawAppenderNames = cursor.getString(appenderIndex);
-				final String[] attachedNames = (rawAppenderNames == null) ? new String[0]
-						: rawAppenderNames.split(",");
-
-				LoggerHolder logger = new LoggerHolder();
-				logger.name = name;
+				final LoggerHolder logger;
+				if(rawAppenderNames == null || rawAppenderNames.equals("")) {
+					logger = new LoggerHolder(loggerName);
+				} else {
+					final String[] attachedNames = (rawAppenderNames == null) ? new String[0]
+							: rawAppenderNames.split(",");
+	
+					List<AppenderHolder> appenderList = new ArrayList<AppenderHolder>(
+							attachedNames.length);
+					
+					personalLogger.trace("Raw appender name String: {}", rawAppenderNames);
+					personalLogger.trace("Split String array: {}", Arrays.toString(attachedNames));
+					for (String appenderName : attachedNames) {
+						personalLogger.trace("Adding AppenderHolder {} to LoggerHolder {}", appenderName, loggerName);
+						AppenderHolder holder = tempMap.get(appenderName);
+						if (holder == null) {
+							holder = new AppenderHolder(appenderName);
+							tempMap.put(holder.name, holder);
+						}
+						appenderList.add(holder);
+					}
+					logger = new LoggerHolder(loggerName, appenderList);
+				}
+				
 				logger.additivity = additivity;
 				logger.levelInt = levelInt;
-				logger.appenders = new ArrayList<String>(attachedNames.length);
-
-				for (String appenderName : attachedNames) {
-					logger.appenders.add(appenderName);
-				}
 
 				loggerMap.put(logger.name, logger);
 
 				/*
-				 * To keep from wasting time building a list from the Collection
-				 * of values in the Map and then sorting it ourselves, we just
-				 * make a list of loggers along with the map. The content
-				 * provider originally got the list of loggers from Logback, and
-				 * Logback sorted the list before returning it.
+				 * We want our ListView to show the Loggers in alphabetical
+				 * order. To keep from wasting time building a list from the
+				 * Collection of values in the Map and then sorting it
+				 * ourselves, we just make a temporary list of loggers along
+				 * with the map. The content provider originally got the list of
+				 * loggers from Logback, and Logback sorted the list before
+				 * returning it.
 				 */
 				tempList.add(logger);
 
 				if (logger.name.equals(Logger.ROOT_LOGGER_NAME)) {
 					rootLogger = logger;
 				}
-
-			}
-		}
-
-		// Query the Content Provider for the Appender list
-		cursor = getContentResolver().query(
-				CpConstants.AppenderTable.CONTENT_URI, null, null, null, null);
-
-		if (cursor != null && cursor.getCount() >= 1) {
-			while (cursor.moveToNext()) {
-
-				final int nameIndex = cursor
-						.getColumnIndex(CpConstants.AppenderTable.NAME);
-				final int filepathIndex = cursor
-						.getColumnIndex(CpConstants.AppenderTable.FILE_PATH_STRING);
-
-				AppenderHolder appender = new AppenderHolder();
-				appender.name = cursor.getString(nameIndex);
-				appender.filepath = cursor.getString(filepathIndex);
-
-				appenderList.add(appender);
 
 			}
 		}
@@ -269,10 +289,9 @@ public class LoggerEditor extends ListActivity {
 		// We make sure to initialize all of the fields so we don't accidentally
 		// get a null pointer exception
 		if (rootLogger == null) {
-			rootLogger = new LoggerHolder();
-			rootLogger.name = "ROOT_NOT_FOUND";
+			rootLogger = new LoggerHolder("ROOT_NOT_FOUND");
 			rootLogger.levelInt = Level.OFF_INT;
-			rootLogger.appenders = new ArrayList<String>();
+			rootLogger.appenders = new ArrayList<AppenderHolder>();
 		}
 
 		final Tree<LoggerHolder> mTree = Tree.newInstance(rootLogger);
@@ -338,7 +357,7 @@ public class LoggerEditor extends ListActivity {
 
 		final LoggerHolder nextSelectedLogger = (LoggerHolder) parent
 				.getItemAtPosition(position);
-		final Level effective = nextSelectedLogger.getEffectiveLevel();
+		final Level effective = getEffectiveLevel(nextSelectedLogger);
 
 		updateSelText(nextSelectedLogger.name);
 
@@ -346,7 +365,7 @@ public class LoggerEditor extends ListActivity {
 			this.spinnerListener.updateSpinner(effective, this.levelSpinner);
 		} else if (nextSelectedLogger.equals(this.selectedLogger)) {
 			return;
-		} else if ((!effective.equals(selectedLogger.getEffectiveLevel()))
+		} else if ((!effective.equals(getEffectiveLevel(selectedLogger)))
 				|| this.levelSpinner.getSelectedItemPosition() == CLEAR_IX) {
 			this.spinnerListener.updateSpinner(effective, this.levelSpinner);
 		}
@@ -506,7 +525,6 @@ public class LoggerEditor extends ListActivity {
 	}
 
 	private void writeXML(PrintStream outStream, LoggerHolder logger) {
-
 		final String name = logger.name;
 		final int levelInt = logger.levelInt;
 		final String appenderStr = makeAppenderStr(logger.appenders);
@@ -529,23 +547,20 @@ public class LoggerEditor extends ListActivity {
 
 		personalLogger.trace("Writing line to file: {}", outputStr);
 		outStream.println(outputStr);
-
 	}
 
-	private String makeAppenderStr(List<String> appenders) {
-
+	private String makeAppenderStr(List<AppenderHolder> appenders) {
 		if (appenders.isEmpty())
 			return LoggerConfigureAction.NO_APPENDER_STR;
 
 		StringBuilder bldr = new StringBuilder();
-		for (String appenderName : appenders) {
-			bldr.append(appenderName).append(" ");
+		for (AppenderHolder holder : appenders) {
+			bldr.append(holder.name).append(" ");
 		}
 		return bldr.toString().trim();
 	}
 
 	private void createReaderSelectorDialog() {
-
 		final Dialog dialog = new Dialog(this);
 		dialog.setTitle("View logs");
 
@@ -590,7 +605,6 @@ public class LoggerEditor extends ListActivity {
 		}
 
 		dialog.show();
-
 	}
 
 	/**
@@ -718,18 +732,18 @@ public class LoggerEditor extends ListActivity {
 			if (logger.levelInt == CpConstants.NO_LEVEL) {
 				holder.tv.setTextAppearance(parent,
 						R.style.unselected_logger_font);
-				parent.setEffectiveIcon(logger.getEffectiveLevel(),
+				parent.setEffectiveIcon(getEffectiveLevel(logger),
 						holder.levelIV);
 			} else {
 				holder.tv.setTextAppearance(parent,
 						R.style.selected_logger_font);
-				parent.setActualIcon(logger.getEffectiveLevel(), holder.levelIV);
+				parent.setActualIcon(getEffectiveLevel(logger), holder.levelIV);
 			}
 
 			if (logger == rootLogger) {
 				holder.appenderIV
 						.setImageResource(R.drawable.appender_attached_icon);
-			} else if (!logger.additivity) {
+			} else if (!logger.isAdditive()) {
 				holder.appenderIV
 						.setImageResource(R.drawable.appender_attached_icon);
 			} else {
@@ -746,10 +760,10 @@ public class LoggerEditor extends ListActivity {
 
 			final StringBuilder nameBldr = new StringBuilder();
 			nameBldr.append(" [ ");
-			final List<String> effectiveList = aLogger.getEffectiveAppenders();
+			final List<AppenderHolder> effectiveList = getEffectiveAppenders(aLogger);
 
-			for (String str : effectiveList) {
-				nameBldr.append(str).append(" ");
+			for (AppenderHolder holder : effectiveList) {
+				nameBldr.append(holder.name).append(" ");
 			}
 
 			return nameBldr.append("]").toString();
@@ -779,7 +793,13 @@ public class LoggerEditor extends ListActivity {
 				+ selectedLogger.name + "  Close dialog to save changes.";
 		tv.setText(message);
 
-		final LinearLayout layout = (LinearLayout) dialog.findViewById(R.id.appender_layout);
+		final LoggerHolder parentLogger = loggerMap.get(Loggers
+				.getParentLoggerName(selectedLogger.name));
+		final List<AppenderHolder> parentEffAppenders = getEffectiveAppenders(parentLogger);
+		final List<AppenderHolder> selectedEffAppenders = getEffectiveAppenders(selectedLogger);
+
+		final LinearLayout layout = (LinearLayout) dialog
+				.findViewById(R.id.appender_layout);
 
 		for (AppenderHolder a : appenderList) {
 			CheckBox cb = new CheckBox(this);
@@ -787,9 +807,9 @@ public class LoggerEditor extends ListActivity {
 			cb.setWidth(ViewGroup.LayoutParams.MATCH_PARENT);
 			cb.setHeight(ViewGroup.LayoutParams.WRAP_CONTENT);
 			cb.setTag(a);
-			
-			cb.setChecked(selectedLogger.appenders.contains(a.name));
-			
+
+			cb.setChecked(selectedEffAppenders.contains(a));
+
 			layout.addView(cb);
 		}
 
@@ -802,11 +822,14 @@ public class LoggerEditor extends ListActivity {
 			@Override
 			public void onDismiss(DialogInterface dialog) {
 				StringBuilder sb = new StringBuilder();
+				selectedLogger.appenders.clear();
 
 				for (AppenderHolder a : appenderList) {
 					CheckBox cb = (CheckBox) layout.findViewWithTag(a);
-					if (cb.isChecked())
+					if (cb.isChecked()) {
 						sb.append(a.name).append(",");
+						selectedLogger.appenders.add(a);
+					}
 				}
 
 				// Delete the trailing comma
@@ -821,16 +844,19 @@ public class LoggerEditor extends ListActivity {
 				parent.getContentResolver().update(updateUri, values,
 						selectedLogger.name, null);
 
-				LoggerHolder parentLogger = loggerMap.get(Loggers
-						.getParentLoggerName(selectedLogger.name));
-
 				// We have to sort the selected logger's appender list to obey
 				// the contract of the List equals method. The effective
 				// appender list we get is already sorted for us.
-				Collections.sort(selectedLogger.appenders);
+				Collections.sort(selectedLogger.appenders,
+						AppenderHolder.COMPARATOR);
+
+				personalLogger.trace("Selected logger attached appenders: {}",
+						selectedLogger.appenders.toString());
+				personalLogger.trace("Parent logger effective appenders: {}",
+						parentEffAppenders);
 				selectedLogger.additivity = selectedLogger.appenders
-						.equals(parentLogger.getEffectiveAppenders());
-				
+						.equals(parentEffAppenders);
+
 				parent.mListView.invalidateViews();
 			}
 
@@ -1002,7 +1028,7 @@ public class LoggerEditor extends ListActivity {
 			// We want to use the effective level for the icon if the
 			// Logger's level is null
 			updateIcon(
-					(nextLevelInt == CpConstants.NO_LEVEL) ? parent.selectedLogger.getEffectiveLevel()
+					(nextLevelInt == CpConstants.NO_LEVEL) ? getEffectiveLevel(parent.selectedLogger)
 							: Level.toLevel(nextLevelInt, Level.DEBUG),
 					parent.selectedView);
 
@@ -1010,72 +1036,172 @@ public class LoggerEditor extends ListActivity {
 
 	}
 
-	protected class LoggerHolder {
+	/**
+	 * Static class to hold the important fields of a Logger. Used to cache the
+	 * results from queries to the ContentProvider so that we don't have to
+	 * query it often. Be sure to update the fields of any instances of this
+	 * class if you send an update to the ContentProvider.
+	 * 
+	 * @author Nick King
+	 * 
+	 */
+	static class LoggerHolder {
 
 		int levelInt = CpConstants.NO_LEVEL;
-		boolean additivity;
+		boolean additivity = true;
 		String name;
-		List<String> appenders;
+		List<AppenderHolder> appenders = new ArrayList<AppenderHolder>();
 
-		public Level getEffectiveLevel() {
-			if (levelInt != CpConstants.NO_LEVEL) {
-				return Level.toLevel(levelInt);
-			}
-
-			if (this == rootLogger) {
-				return Level.toLevel(levelInt);
-			}
-
-			final String parentName = Loggers.getParentLoggerName(name);
-			final LoggerHolder parent = loggerMap.get(parentName);
-
-			if (parent == null) {
-				// The parent should never be null, but just log an error and
-				// return our own level if it does
-				personalLogger
-						.error("Could not find parent logger for {} when getting effective level",
-								name);
-				return Level.toLevel(levelInt);
-			}
-
-			return parent.getEffectiveLevel();
+		@SuppressWarnings("unused")
+		private LoggerHolder() {
+			throw new AssertionError("This constructor should never be called");
 		}
 
-		/**
-		 * @return an alphabetically sorted list of Appenders attached to the
-		 *         LoggerHolder
-		 */
-		public List<String> getEffectiveAppenders() {
-			Set<String> set = getEffectiveAppenders(new HashSet<String>());
-			List<String> list = new ArrayList<String>();
-			for (String str : set) {
-				list.add(str);
-			}
-			Collections.sort(list);
-			return list;
+		LoggerHolder(String name) {
+			if (name == null)
+				throw new NullPointerException("LoggerHolder given null name");
+			this.name = name;
 		}
 
-		private Set<String> getEffectiveAppenders(Set<String> soFar) {
-			soFar.addAll(appenders);
+		LoggerHolder(String name, List<AppenderHolder> appenders) {
+			this(name);
+			if (appenders == null)
+				throw new NullPointerException(
+						"LoggerHolder given null AppenderHolder list");
+			// We don't want our list to point to the same list as the one we
+			// were given
+			this.appenders = new ArrayList<AppenderHolder>(appenders);
+		}
 
-			if (additivity == false || this == rootLogger) {
-				return soFar;
-			} else {
-				String parentName = Loggers.getParentLoggerName(name);
-				LoggerHolder parent = loggerMap.get(parentName);
-				return parent.getEffectiveAppenders(soFar);
-			}
+		boolean isAdditive() {
+			return additivity;
+		}
+
+		@Override
+		public String toString() {
+			return "LoggerHolder \""
+					+ name
+					+ "\""
+					+ " Level: "
+					+ ((levelInt == CpConstants.NO_LEVEL) ? "none" : Level
+							.toLevel(levelInt, Level.ALL));
 		}
 
 	}
 
-	protected class AppenderHolder {
+	/**
+	 * @return an alphabetically sorted list of Appenders attached to the
+	 *         LoggerHolder
+	 */
+	public List<AppenderHolder> getEffectiveAppenders(LoggerHolder logger) {
+		Set<AppenderHolder> set = getEffectiveAppenders(
+				new HashSet<AppenderHolder>(), logger);
+		List<AppenderHolder> list = new ArrayList<AppenderHolder>(set);
+		Collections.sort(list, AppenderHolder.COMPARATOR);
+		return list;
+	}
+
+	private Set<AppenderHolder> getEffectiveAppenders(
+			Set<AppenderHolder> soFar, LoggerHolder logger) {
+		soFar.addAll(logger.appenders);
+
+		if (logger.additivity == false || logger == rootLogger) {
+			return soFar;
+		}
+
+		String parentName = Loggers.getParentLoggerName(logger.name);
+		LoggerHolder parent = loggerMap.get(parentName);
+
+		if (parent != null) {
+			return getEffectiveAppenders(soFar, parent);
+		}
+
+		// The parent should never be null, but if it is, we just
+		// return what we have to prevent a null pointer exception
+		return soFar;
+
+	}
+
+	private Level getEffectiveLevel(LoggerHolder logger) {
+		if (logger.levelInt != CpConstants.NO_LEVEL) {
+			return Level.toLevel(logger.levelInt);
+		}
+
+		if (logger == rootLogger) {
+			return Level.toLevel(logger.levelInt);
+		}
+
+		final String parentName = Loggers.getParentLoggerName(logger.name);
+		final LoggerHolder parent = loggerMap.get(parentName);
+
+		if (parent == null) {
+			// The parent should never be null, but just log an error and
+			// return our own level if it does
+			personalLogger
+					.error("Could not find parent logger for {} when getting effective level",
+							logger.name);
+			return Level.toLevel(logger.levelInt);
+		}
+
+		return getEffectiveLevel(parent);
+	}
+
+	/**
+	 * Static class to hold the important fields of an Appender. Used to cache
+	 * the results from queries to the ContentProvider so that we don't have to
+	 * query it often. Be sure to update the fields of any instances of this
+	 * class if you send an update to the ContentProvider.
+	 * 
+	 * @author Nick King
+	 * 
+	 */
+	static class AppenderHolder {
 
 		String name;
 		String filepath;
 
-		public boolean hasFilepath() {
+		@SuppressWarnings("unused")
+		private AppenderHolder() {
+			throw new AssertionError("This constructor should never be called.");
+		}
+
+		AppenderHolder(String name) {
+			if (name == null)
+				throw new NullPointerException("AppenderHolder given null name");
+			this.name = name;
+		}
+
+		static final Comparator<AppenderHolder> COMPARATOR = new Comparator<AppenderHolder>() {
+
+			@Override
+			public int compare(AppenderHolder holder1, AppenderHolder holder2) {
+				// We just want to put them in alphabetical order by name
+				return holder1.name.compareTo(holder2.name);
+			}
+
+		};
+
+		boolean hasFilepath() {
 			return filepath != null;
+		}
+
+		@Override
+		public int hashCode() {
+			return name.hashCode();
+		}
+
+		@Override
+		public boolean equals(Object o) {
+			if (!(o instanceof AppenderHolder))
+				return false;
+
+			AppenderHolder holder = (AppenderHolder) o;
+			return this.name.equals(holder.name);
+		}
+
+		@Override
+		public String toString() {
+			return "AppenderHolder \"" + name + "\"";
 		}
 
 	}
