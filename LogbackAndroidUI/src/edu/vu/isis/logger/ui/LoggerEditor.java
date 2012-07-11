@@ -291,7 +291,7 @@ public class LoggerEditor extends ListActivity {
 		if (rootLogger == null) {
 			rootLogger = new LoggerHolder("ROOT_NOT_FOUND");
 			rootLogger.levelInt = Level.OFF_INT;
-			rootLogger.appenders = new ArrayList<AppenderHolder>();
+			rootLogger.appenders = new HashSet<AppenderHolder>();
 		}
 
 		final Tree<LoggerHolder> mTree = Tree.newInstance(rootLogger);
@@ -549,7 +549,7 @@ public class LoggerEditor extends ListActivity {
 		outStream.println(outputStr);
 	}
 
-	private String makeAppenderStr(List<AppenderHolder> appenders) {
+	private String makeAppenderStr(Collection<AppenderHolder> appenders) {
 		if (appenders.isEmpty())
 			return LoggerConfigureAction.NO_APPENDER_STR;
 
@@ -749,6 +749,22 @@ public class LoggerEditor extends ListActivity {
 			} else {
 				holder.appenderIV.setImageBitmap(null);
 			}
+			
+			// We have to save the padding that was set on the row
+			// and reapply it after we set the background drawable
+			// since setBackgroundDrawable clears padding
+			final int rightPadding = row.getPaddingRight();
+			final int leftPadding = row.getPaddingLeft();
+			final int topPadding = row.getPaddingTop();
+			final int bottomPadding = row.getPaddingBottom();
+			
+			if(selectedLogger == logger) {
+				row.setBackgroundDrawable(getResources().getDrawable(R.color.selected_logger_bg));
+			} else {
+				row.setBackgroundDrawable(getResources().getDrawable(android.R.drawable.list_selector_background));
+			}
+			
+			row.setPadding(leftPadding, topPadding, rightPadding, bottomPadding);
 
 			return row;
 		}
@@ -760,7 +776,7 @@ public class LoggerEditor extends ListActivity {
 
 			final StringBuilder nameBldr = new StringBuilder();
 			nameBldr.append(" [ ");
-			final List<AppenderHolder> effectiveList = getEffectiveAppenders(aLogger);
+			final List<AppenderHolder> effectiveList = getEffectiveAppenderList(aLogger);
 
 			for (AppenderHolder holder : effectiveList) {
 				nameBldr.append(holder.name).append(" ");
@@ -795,8 +811,8 @@ public class LoggerEditor extends ListActivity {
 
 		final LoggerHolder parentLogger = loggerMap.get(Loggers
 				.getParentLoggerName(selectedLogger.name));
-		final List<AppenderHolder> parentEffAppenders = getEffectiveAppenders(parentLogger);
-		final List<AppenderHolder> selectedEffAppenders = getEffectiveAppenders(selectedLogger);
+		final Set<AppenderHolder> parentEffAppenders = getEffectiveAppenderSet(parentLogger);
+		final Set<AppenderHolder> selectedEffAppenders = getEffectiveAppenderSet(selectedLogger);
 
 		final LinearLayout layout = (LinearLayout) dialog
 				.findViewById(R.id.appender_layout);
@@ -822,19 +838,32 @@ public class LoggerEditor extends ListActivity {
 			@Override
 			public void onDismiss(DialogInterface dialog) {
 				StringBuilder sb = new StringBuilder();
-				selectedLogger.appenders.clear();
 
 				for (AppenderHolder a : appenderList) {
 					CheckBox cb = (CheckBox) layout.findViewWithTag(a);
 					if (cb.isChecked()) {
 						sb.append(a.name).append(",");
 						selectedLogger.appenders.add(a);
+					} else {
+						selectedLogger.appenders.remove(a);
 					}
 				}
 
 				// Delete the trailing comma
 				if (sb.length() > 0) {
 					sb.deleteCharAt(sb.length() - 1);
+				}
+				
+				personalLogger.trace("Selected logger attached appenders: {}",
+						selectedLogger.appenders.toString());
+				personalLogger.trace("Parent logger effective appenders: {}",
+						parentEffAppenders.toString());
+				
+				if(selectedLogger.appenders.equals(parentEffAppenders)) {
+					selectedLogger.additivity = true;
+					selectedLogger.appenders.clear();
+				} else {
+					selectedLogger.additivity = false;
 				}
 
 				Uri updateUri = ContentUris.withAppendedId(
@@ -843,19 +872,6 @@ public class LoggerEditor extends ListActivity {
 				values.put(CpConstants.APPENDER_KEY, sb.toString());
 				parent.getContentResolver().update(updateUri, values,
 						selectedLogger.name, null);
-
-				// We have to sort the selected logger's appender list to obey
-				// the contract of the List equals method. The effective
-				// appender list we get is already sorted for us.
-				Collections.sort(selectedLogger.appenders,
-						AppenderHolder.COMPARATOR);
-
-				personalLogger.trace("Selected logger attached appenders: {}",
-						selectedLogger.appenders.toString());
-				personalLogger.trace("Parent logger effective appenders: {}",
-						parentEffAppenders);
-				selectedLogger.additivity = selectedLogger.appenders
-						.equals(parentEffAppenders);
 
 				parent.mListView.invalidateViews();
 			}
@@ -1050,7 +1066,7 @@ public class LoggerEditor extends ListActivity {
 		int levelInt = CpConstants.NO_LEVEL;
 		boolean additivity = true;
 		String name;
-		List<AppenderHolder> appenders = new ArrayList<AppenderHolder>();
+		Set<AppenderHolder> appenders = new HashSet<AppenderHolder>();
 
 		@SuppressWarnings("unused")
 		private LoggerHolder() {
@@ -1070,7 +1086,7 @@ public class LoggerEditor extends ListActivity {
 						"LoggerHolder given null AppenderHolder list");
 			// We don't want our list to point to the same list as the one we
 			// were given
-			this.appenders = new ArrayList<AppenderHolder>(appenders);
+			this.appenders = new HashSet<AppenderHolder>(appenders);
 		}
 
 		boolean isAdditive() {
@@ -1090,15 +1106,20 @@ public class LoggerEditor extends ListActivity {
 	}
 
 	/**
-	 * @return an alphabetically sorted list of Appenders attached to the
+	 * @return an alphabetically sorted list of Appenders affecting the
 	 *         LoggerHolder
 	 */
-	public List<AppenderHolder> getEffectiveAppenders(LoggerHolder logger) {
+	private List<AppenderHolder> getEffectiveAppenderList(LoggerHolder logger) {
 		Set<AppenderHolder> set = getEffectiveAppenders(
 				new HashSet<AppenderHolder>(), logger);
 		List<AppenderHolder> list = new ArrayList<AppenderHolder>(set);
 		Collections.sort(list, AppenderHolder.COMPARATOR);
 		return list;
+	}
+	
+	// Just a wrapper for the recursive function
+	private Set<AppenderHolder> getEffectiveAppenderSet(LoggerHolder logger) {
+		return getEffectiveAppenders(new HashSet<AppenderHolder>(), logger);
 	}
 
 	private Set<AppenderHolder> getEffectiveAppenders(

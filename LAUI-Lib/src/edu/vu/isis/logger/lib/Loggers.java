@@ -37,7 +37,6 @@ public final class Loggers {
 	};
 
 	// Suppress default constructor to prevent instantiation
-	// (See Item 4 in Effective Java, Second Edition)
 	private Loggers() {
 	}
 
@@ -366,10 +365,16 @@ public final class Loggers {
 	}
 
 	public static void clearAppenders(Logger logger) {
-		Appender<ILoggingEvent> a = null;
-		for (Iterator<Appender<ILoggingEvent>> itr = logger
-				.iteratorForAppenders(); itr.hasNext(); a = itr.next()) {
-			logger.detachAppender(a);
+		Log.v("Loggers.java", "clearAppenders called with logger " + logger.getName());
+		Iterator<Appender<ILoggingEvent>> itr = logger
+				.iteratorForAppenders();
+		while(itr.hasNext()) {
+			Appender<ILoggingEvent> a = itr.next();
+			if(logger.detachAppender(a)) {
+				Log.v("Loggers.java", "Appender " + a.getName() + " detached from logger " + logger.getName());
+			} else {
+				Log.v("Loggers.java", "Could not detach appender " + a.getName() + " from logger " + logger.getName());
+			}
 		}
 	}
 
