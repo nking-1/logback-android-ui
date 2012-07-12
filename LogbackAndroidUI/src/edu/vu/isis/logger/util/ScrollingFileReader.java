@@ -23,8 +23,7 @@ public class ScrollingFileReader {
 	public ScrollingFileReader(File file, int spreadLimit)
 			throws FileNotFoundException, IOException {
 		mFile = file;
-		mBuffer = new FileInputStream(file).getChannel().map(MapMode.READ_ONLY,
-				0, file.length());
+		mBuffer = openBuffer(mFile);
 		this.spreadLimit = spreadLimit;
 		topLinePos = botLinePos = 0;
 		effectiveSpread = 0;
@@ -192,8 +191,7 @@ public class ScrollingFileReader {
 	 */
 	public void notifyFileModified() throws FileNotFoundException, IOException {
 
-		mBuffer = new FileInputStream(mFile).getChannel().map(
-				MapMode.READ_ONLY, 0, mFile.length());
+		mBuffer = openBuffer(mFile);
 
 		numLinesInBuffer = NUM_LINES_NOT_COUNTED;
 
@@ -333,6 +331,15 @@ public class ScrollingFileReader {
 		ByteBuffers.skipBackward(mBuffer, 1);
 		botLinePos = ByteBuffers.getBufferPosition(mBuffer) + 2;
 
+	}
+	
+	
+	private static ByteBuffer openBuffer(File file) throws IOException {
+		final FileInputStream fis = new FileInputStream(file);
+		ByteBuffer buffer = fis.getChannel().map(MapMode.READ_ONLY,
+				0, file.length());
+		fis.close();
+		return buffer;
 	}
 
 

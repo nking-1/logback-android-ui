@@ -55,6 +55,7 @@ public class FileLogReader extends LogReader {
 	public static final LogElement END_OF_FILE = new LogElement(LogLevel.None,
 			ByteBuffers.END_OF_TEXT_STR);
 
+	@SuppressWarnings("unused")
 	private final MyFileObserver mObserver;
 	private final File mFile;
 	private final ScrollingFileReader mReader;
@@ -251,6 +252,7 @@ public class FileLogReader extends LogReader {
 	 */
 	private class MyFileObserver extends FileObserver {
 
+		@SuppressWarnings("unused")
 		private FileLogReader parent = FileLogReader.this;
 
 		public MyFileObserver(String path) {

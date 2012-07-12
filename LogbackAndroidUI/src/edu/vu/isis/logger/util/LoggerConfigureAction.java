@@ -8,8 +8,6 @@ import org.xml.sax.Attributes;
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.LoggerContext;
-import ch.qos.logback.classic.spi.ILoggingEvent;
-import ch.qos.logback.core.Appender;
 import ch.qos.logback.core.joran.action.Action;
 import ch.qos.logback.core.joran.spi.ActionException;
 import ch.qos.logback.core.joran.spi.InterpretationContext;
@@ -76,14 +74,6 @@ public class LoggerConfigureAction extends Action {
 			if(logger.getName().equals(name)) return true;
 		}
 		return false;
-	}
-	
-	
-	private Appender<ILoggingEvent> findMatchingAppender(List<Appender<ILoggingEvent>> list, String name) {
-		for(Appender<ILoggingEvent> a : list) {
-			if(a.getName().equals(name)) return a;
-		}
-		return null;
 	}
 	
 

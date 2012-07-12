@@ -11,7 +11,6 @@ import android.os.Message;
 import android.preference.PreferenceManager;
 import android.view.Menu;
 import android.view.MenuItem;
-import android.widget.AbsListView;
 import android.widget.Toast;
 import edu.vu.isis.logger.util.LogElement;
 import edu.vu.isis.logger.util.LogcatLogReader;
@@ -75,7 +74,7 @@ public class LogcatLogViewer extends LogViewerBase {
 			final String errorMsg = "Could not read from Logcat";
 			logger.error(errorMsg);
 			e.printStackTrace();
-			Toast.makeText(this, errorMsg, Toast.LENGTH_LONG);
+			Toast.makeText(this, errorMsg, Toast.LENGTH_LONG).show();
 			return;
 		}
 
