@@ -31,49 +31,37 @@ public class WellBehavedSpinner extends Spinner {
 	public WellBehavedSpinner(Context context, AttributeSet attrs) {
 		super(context, attrs);
 
+		Field spinnerPopup = findField(Spinner.class.getDeclaredFields(),
+				"mPopup");
 		Class<?>[] innerClasses = Spinner.class.getDeclaredClasses();
-		Field dialogPopupAlertDlg = null;
-		Field dropdownPopupOnItemClickListener = null;
+		Class<?> spinnerPopupClass = null;
+		try {
+			spinnerPopupClass = spinnerPopup.get(this).getClass();
+		} catch (IllegalArgumentException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		} catch (IllegalAccessException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		}
 
-		for (int i = 0; i < innerClasses.length; i++) {
-			if (innerClasses[i].getName().equals("android.widget.Spinner$DialogPopup")) {
-				Field[] fields = innerClasses[i].getDeclaredFields();
-				for(Field field : fields) {
-					if(field.getName().equals("mPopup")) {
-						dialogPopupAlertDlg = field;
-					}
-				}
-				dialogPopupAlertDlg.setAccessible(true);
-				AlertDialog dlg = null;
+		if (spinnerPopupClass == null)
+			return;
+
+		for (Class<?> clazz : innerClasses) {
+			if (clazz.getName().equals("android.widget.Spinner$DialogPopup")
+					&& spinnerPopupClass.equals(clazz)) {
+				setupAlertDlgField(clazz);
+			} else if (clazz.getName().equals(
+					"android.widget.Spinner$DropdownPopup")
+					&& spinnerPopupClass.equals(clazz)) {
 				try {
-					dlg = (AlertDialog) dialogPopupAlertDlg
-							.get(innerClasses[i]);
-				} catch (IllegalArgumentException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				} catch (IllegalAccessException e) {
+					Field field = clazz.getField("mItemClickListener");
+					field.setAccessible(true);
+				} catch (NoSuchFieldException e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
 				}
-				if (dlg != null) {
-					dlg.setOnDismissListener(new OnDismissListener() {
-
-						@Override
-						public void onDismiss(DialogInterface dialog) {
-							mListener.onSpinnerDialogClick(0);
-						}
-
-					});
-				}
-			} else if (innerClasses[i].getName().equals("android.widget.Spinner$DropdownPopup")) {
-//				try {
-//					dropdownPopupOnItemClickListener = innerClasses[i]
-//							.getField("mItemClickListener");
-//				} catch (NoSuchFieldException e) {
-//					// TODO Auto-generated catch block
-//					e.printStackTrace();
-//				}
-//				dropdownPopupOnItemClickListener.setAccessible(true);
 			}
 		}
 
@@ -89,6 +77,41 @@ public class WellBehavedSpinner extends Spinner {
 		super.onClick(dialog, which);
 		mListener.onSpinnerDialogClick(which);
 
+	}
+
+	private void setupAlertDlgField(Class<?> clazz) {
+		final Field[] fields = clazz.getDeclaredFields();
+		Field dialogPopupAlertDlg = findField(fields, "mPopup");
+		dialogPopupAlertDlg.setAccessible(true);
+		spinnerPopup.setAccessible(true);
+		try {
+			// Get this Spinner's mPopup, then get the wrapped AlertDialog
+			AlertDialog dlg = (AlertDialog) dialogPopupAlertDlg
+					.get(spinnerPopup.get(this));
+			dlg.setOnDismissListener(new OnDismissListener() {
+
+				@Override
+				public void onDismiss(DialogInterface dialog) {
+					mListener.onSpinnerDialogClick(0);
+				}
+
+			});
+		} catch (IllegalArgumentException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IllegalAccessException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
+
+	private Field findField(Field[] fields, String name) {
+		for (Field field : fields) {
+			if (field.getName().equals(name)) {
+				return field;
+			}
+		}
+		return null;
 	}
 
 }
