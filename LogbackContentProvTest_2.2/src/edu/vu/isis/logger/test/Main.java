@@ -21,6 +21,7 @@ public class Main extends ListActivity {
 	
 	private static final Runnable SPAM_RUNNABLE = new Runnable() {
 		
+		@Override
 		public void run() {
 			spamLogger.error("My level is: {}\tCurrent time: {}", spamLogger.getLevel().toString(), System.currentTimeMillis());
 		}

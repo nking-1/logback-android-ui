@@ -54,6 +54,7 @@ public class LogViewerBase extends ListActivity {
 		setContentView(R.layout.log_viewer);
 		mListView = getListView();
 
+		@SuppressWarnings("deprecation")
 		Object o = getLastNonConfigurationInstance();
 
 		if (o == null) {

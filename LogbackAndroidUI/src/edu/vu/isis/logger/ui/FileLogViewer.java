@@ -64,7 +64,9 @@ public class FileLogViewer extends LogViewerBase {
 		super.onCreate(savedInstanceState);
 
 		final Display display = getWindowManager().getDefaultDisplay();
+		@SuppressWarnings("deprecation")
 		final int width = display.getWidth();
+		@SuppressWarnings("deprecation")
 		final int height = display.getHeight();
 		final int largestDimension = Math.max(width, height);
 
