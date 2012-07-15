@@ -25,7 +25,7 @@ import ch.qos.logback.core.FileAppender;
 
 public class LauiContentProvider extends ContentProvider {
 
-	public static final String AUTHORITY = "edu.vu.isis.logger.LauiContentProvider";
+	public static final String AUTHORITY_SUFFIX = "LauiContentProvider";
 
 	public static final class LoggerTable implements BaseColumns {
 
@@ -39,8 +39,6 @@ public class LauiContentProvider extends ContentProvider {
 				+ MIME_ITEM;
 		public static final String PATH_SINGLE = "loggers/#";
 		public static final String PATH_MULTIPLE = "loggers";
-		public static final Uri CONTENT_URI = Uri.parse("content://"
-				+ AUTHORITY + "/" + PATH_MULTIPLE);
 
 		// Columns
 		public static final String NAME = "name";
@@ -66,8 +64,6 @@ public class LauiContentProvider extends ContentProvider {
 				+ MIME_ITEM;
 		public static final String PATH_SINGLE = "appenders/#";
 		public static final String PATH_MULTIPLE = "appenders";
-		public static final Uri CONTENT_URI = Uri.parse("content://"
-				+ AUTHORITY + "/" + PATH_MULTIPLE);
 
 		// Columns
 		public static final String NAME = "name";
@@ -87,7 +83,7 @@ public class LauiContentProvider extends ContentProvider {
 	public static final String LEVEL_KEY = "level";
 	public static final String APPENDER_KEY = "appender";
 
-	private static UriMatcher URI_MATCHER;
+	private static UriMatcher URI_MATCHER = new UriMatcher(UriMatcher.NO_MATCH);;
 	public static final Uri OP_NOT_SUPPORTED = Uri
 			.parse("That operation is not supported");
 
@@ -99,29 +95,29 @@ public class LauiContentProvider extends ContentProvider {
 
 	private String logTag;
 
-	// Initialize the Uri matcher
-	static {
-		LauiContentProvider.URI_MATCHER = new UriMatcher(UriMatcher.NO_MATCH);
-		LauiContentProvider.URI_MATCHER.addURI(LauiContentProvider.AUTHORITY,
-				LauiContentProvider.LoggerTable.PATH_SINGLE,
-				LauiContentProvider.SINGLE_LOGGER);
-		LauiContentProvider.URI_MATCHER.addURI(LauiContentProvider.AUTHORITY,
-				LauiContentProvider.LoggerTable.PATH_MULTIPLE,
-				LauiContentProvider.MULTIPLE_LOGGERS);
-		LauiContentProvider.URI_MATCHER.addURI(LauiContentProvider.AUTHORITY,
-				LauiContentProvider.AppenderTable.PATH_SINGLE,
-				LauiContentProvider.SINGLE_APPENDER);
-		LauiContentProvider.URI_MATCHER.addURI(LauiContentProvider.AUTHORITY,
-				LauiContentProvider.AppenderTable.PATH_MULTIPLE,
-				LauiContentProvider.MULTIPLE_APPENDERS);
-
-	}
-
 	@Override
 	public boolean onCreate() {
-		// TODO Auto-generated method stub
-		// Try broadcasting an intent which an intent filter in the
-		// LAUI app will catch
+
+		// We use the implementing app's package name for
+		// part of our authority
+		String packageName = getContext().getApplicationContext()
+				.getPackageName();
+		String authority = packageName + "." + AUTHORITY_SUFFIX;
+
+		// We have to set up our Uri matcher here since we didn't have an
+		// authority until now
+		URI_MATCHER.addURI(authority,
+				LauiContentProvider.LoggerTable.PATH_SINGLE,
+				LauiContentProvider.SINGLE_LOGGER);
+		URI_MATCHER.addURI(authority,
+				LauiContentProvider.LoggerTable.PATH_MULTIPLE,
+				LauiContentProvider.MULTIPLE_LOGGERS);
+		URI_MATCHER.addURI(authority,
+				LauiContentProvider.AppenderTable.PATH_SINGLE,
+				LauiContentProvider.SINGLE_APPENDER);
+		URI_MATCHER.addURI(authority,
+				LauiContentProvider.AppenderTable.PATH_MULTIPLE,
+				LauiContentProvider.MULTIPLE_APPENDERS);
 
 		// Since multiple apps might be using this library, we get the
 		// application name so we can tag our logs without being ambiguous.
@@ -247,7 +243,7 @@ public class LauiContentProvider extends ContentProvider {
 		}
 
 		// Delete the last comma
-		if(sb.length() > 0) {
+		if (sb.length() > 0) {
 			sb.deleteCharAt(sb.length() - 1);
 		}
 
@@ -367,18 +363,22 @@ public class LauiContentProvider extends ContentProvider {
 		if (appenderList.isEmpty())
 			return false;
 
-		if(appenderStr.equals("")) {
-			Log.i(logTag, "Got empty appender string, clearing appenders off Logger " + logger.getName());
+		if (appenderStr.equals("")) {
+			Log.i(logTag,
+					"Got empty appender string, clearing appenders off Logger "
+							+ logger.getName());
 		} else {
 			String[] appenderNames = appenderStr.split(",");
-			Log.v(logTag, "Attaching appenders " + Arrays.toString(appenderNames)
-					+ " to Logger " + logger.getName());
-	
+			Log.v(logTag,
+					"Attaching appenders " + Arrays.toString(appenderNames)
+							+ " to Logger " + logger.getName());
+
 			for (String name : appenderNames) {
 				name = name.trim();
 				Appender<ILoggingEvent> found = findAppender(name, appenderList);
 				if (found == null) {
-					Log.w(logTag, "Appender " + name + " was not found, skipping");
+					Log.w(logTag, "Appender " + name
+							+ " was not found, skipping");
 					continue;
 				}
 				logger.addAppender(found);

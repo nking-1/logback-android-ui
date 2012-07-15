@@ -1,23 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
-<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android" 
-    android:key="log_viewer_preferences">
-    
-    <PreferenceCategory android:title="Max number of lines displayed">
-        <EditTextPreference 
-            android:key="logcat_max_lines"
-            android:title="Logcat appenders"
-            android:summary="Max number of lines displayed by appenders using Logcat"
-            android:dialogTitle="Max Logcat lines"
-            android:dialogMessage="Enter a positive integer, or 0 for unlimited lines"
-            android:defaultValue="1000"
-            android:inputType="numberSigned" />
-        <EditTextPreference 
-            android:key="regular_expression"
-            android:title="Regular expression"
-            android:summary="Regular expression to match against incoming logs"
-            android:dialogTitle="Regular expression"
-            android:dialogMessage="Enter a Java regular expression"
-            android:defaultValue="" />
-    </PreferenceCategory>
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
+    android:key="log_viewer_preferences" >
+
+    <EditTextPreference
+        android:defaultValue="1000"
+        android:dialogMessage="Enter a positive integer, or 0 for unlimited lines"
+        android:dialogTitle="Max Logcat lines"
+        android:inputType="numberSigned"
+        android:key="logcat_max_lines"
+        android:summary="Max number of lines displayed by appenders using Logcat"
+        android:title="Logcat appenders" />
+    <EditTextPreference
+        android:defaultValue=""
+        android:dialogMessage="Enter a Java regular expression"
+        android:dialogTitle="Regular expression"
+        android:key="regular_expression"
+        android:summary="Regular expression to match against incoming logs"
+        android:title="Regular expression" />
 
 </PreferenceScreen>

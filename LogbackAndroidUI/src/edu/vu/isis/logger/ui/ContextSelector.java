@@ -3,47 +3,123 @@ package edu.vu.isis.logger.ui;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.slf4j.LoggerFactory;
-
 import android.app.ListActivity;
 import android.content.Intent;
+import android.content.pm.PackageInfo;
+import android.content.pm.PackageManager;
+import android.content.pm.ProviderInfo;
+import android.graphics.drawable.Drawable;
 import android.os.Bundle;
+import android.view.LayoutInflater;
 import android.view.View;
-import android.widget.ArrayAdapter;
+import android.view.ViewGroup;
+import android.widget.BaseAdapter;
 import android.widget.ListView;
+import android.widget.TextView;
 import edu.vu.isis.logger.R;
 
 public class ContextSelector extends ListActivity {
 
+	private List<AppHolder> mAppList = new ArrayList<AppHolder>();
+
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
-		
+
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.context_selector);
-		
-		final List<String> nameList = new ArrayList<String>();
-		nameList.add("LoggerEditor");
-		
-		final ArrayAdapter<String> adapter = new ArrayAdapter<String>(this, R.layout.context_selector_row, R.id.context_selector_tv, nameList);
-		
-		setListAdapter(adapter);
-		
-		for(char ch='a'; ch<='z'; ch++) {
-			LoggerFactory.getLogger("" + ch);
+
+		final PackageManager pm = getPackageManager();
+		final List<PackageInfo> packageList = pm
+				.getInstalledPackages(PackageManager.GET_PROVIDERS);
+
+		for (PackageInfo pkg : packageList) {
+			if (pkg.applicationInfo == null || pkg.providers == null)
+				continue;
+			for (ProviderInfo info : pkg.providers) {
+				if (info.authority.endsWith("LauiContentProvider")) {
+					AppHolder holder = new AppHolder();
+					Drawable icon = pkg.applicationInfo.loadIcon(pm);
+					CharSequence label = pkg.applicationInfo.loadLabel(pm);
+
+					holder.cpAuthority = info.authority;
+					holder.icon = icon;
+					holder.label = label;
+					mAppList.add(holder);
+				}
+			}
 		}
-		
+
+		setListAdapter(new AppHolderAdapter());
+
 	}
-	
-	
+
 	@Override
-	protected void onListItemClick(ListView parent, View row, int position, long id) {
-		
+	protected void onListItemClick(ListView parent, View row, int position,
+			long id) {
 		Intent intent = new Intent();
 		intent.setClass(this, LoggerEditor.class);
-		
+		intent.putExtra(LoggerEditor.EXTRA_NAME,
+				mAppList.get(position).cpAuthority);
+
 		startActivity(intent);
-		
 	}
-	
-	
+
+	private class AppHolder {
+
+		private Drawable icon;
+		private CharSequence label;
+		private String cpAuthority;
+
+	}
+
+	private class ViewHolder {
+		private TextView tv;
+	}
+
+	private class AppHolderAdapter extends BaseAdapter {
+
+		@Override
+		public int getCount() {
+			return mAppList.size();
+		}
+
+		@Override
+		public Object getItem(int position) {
+			return mAppList.get(position);
+		}
+
+		@Override
+		public long getItemId(int position) {
+			return position;
+		}
+
+		@Override
+		public View getView(int position, View convertView, ViewGroup parent) {
+			final View row;
+			if (convertView == null) {
+				LayoutInflater inflater = getLayoutInflater();
+				row = inflater.inflate(R.layout.context_selector_row, parent, false);
+			} else {
+				row = convertView;
+			}
+
+			TextView tv;
+			if (row.getTag() == null) {
+				tv = (TextView) row.findViewById(R.id.context_selector_row_tv);
+				row.setTag(new ViewHolder().tv = tv);
+			} else {
+				ViewHolder vHolder = (ViewHolder) row.getTag();
+				tv = vHolder.tv;
+			}
+
+			AppHolder aHolder = mAppList.get(position);
+			tv.setText(aHolder.label);
+			tv.setCompoundDrawablesWithIntrinsicBounds(aHolder.icon, null,
+					null, null);
+
+			return row;
+		}
+
+	}
+
 }

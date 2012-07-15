@@ -1,11 +1,11 @@
-package edu.vu.isis.logger.temp;
+package edu.vu.isis.logger.provider;
 
 import android.net.Uri;
 import android.provider.BaseColumns;
 
-public class CpConstants {
+public interface CpConstants {
 
-	public static final String AUTHORITY = "edu.vu.isis.logger.LauiContentProvider";
+	public static final String AUTHORITY_SUFFIX = "LauiContentProvider";
 
 	public static final class LoggerTable implements BaseColumns {
 
@@ -19,8 +19,6 @@ public class CpConstants {
 				+ MIME_ITEM;
 		public static final String PATH_SINGLE = "loggers/#";
 		public static final String PATH_MULTIPLE = "loggers";
-		public static final Uri CONTENT_URI = Uri.parse("content://"
-				+ AUTHORITY + "/" + PATH_MULTIPLE);
 
 		// Columns
 		public static final String NAME = "name";
@@ -46,8 +44,6 @@ public class CpConstants {
 				+ MIME_ITEM;
 		public static final String PATH_SINGLE = "appenders/#";
 		public static final String PATH_MULTIPLE = "appenders";
-		public static final Uri CONTENT_URI = Uri.parse("content://"
-				+ AUTHORITY + "/" + PATH_MULTIPLE);
 
 		// Columns
 		public static final String NAME = "name";

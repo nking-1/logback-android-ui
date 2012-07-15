@@ -36,6 +36,8 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.AdapterView;
+import android.widget.AdapterView.OnItemSelectedListener;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.CheckBox;
@@ -43,7 +45,6 @@ import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ListView;
-import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 import ch.qos.logback.classic.Level;
@@ -52,7 +53,8 @@ import ch.qos.logback.core.joran.action.Action;
 import ch.qos.logback.core.joran.spi.JoranException;
 import ch.qos.logback.core.joran.spi.Pattern;
 import edu.vu.isis.logger.R;
-import edu.vu.isis.logger.temp.CpConstants;
+import edu.vu.isis.logger.provider.CpConstants;
+import edu.vu.isis.logger.provider.LauiContentUri;
 import edu.vu.isis.logger.util.LoggerConfigureAction;
 import edu.vu.isis.logger.util.Loggers;
 import edu.vu.isis.logger.util.SimpleConfigurator;
@@ -61,7 +63,7 @@ import edu.vu.isis.logger.util.TreeAdapter;
 
 /**
  * This class provides a user interface to edit the Level and Appenders of all
- * Logger objects active in the application.
+ * Logger objects provided by the ContentProvider.
  * 
  * @author Nick King
  * 
@@ -78,6 +80,8 @@ public class LoggerEditor extends ListActivity {
 
 	private static final String DEFAULT_SAVE_DIRECTORY = "/logger/save";
 
+	public static final String EXTRA_NAME = "cpauthority";
+
 	private LoggerHolder selectedLogger;
 	private View selectedView;
 	private Tree<LoggerHolder> loggerTree;
@@ -87,7 +91,7 @@ public class LoggerEditor extends ListActivity {
 			.getLoggerByName("ui.logger.editor");
 
 	private TextView selectionText;
-	private WellBehavedSpinner levelSpinner;
+	private NoDefaultSpinner levelSpinner;
 	private MyOnSpinnerDialogClickListener spinnerListener;
 	private ListView mListView;
 	private LoggerIconAdapter mAdapter;
@@ -97,12 +101,10 @@ public class LoggerEditor extends ListActivity {
 	// a list every time. This is mainly used when we make the tree of
 	// LoggerHolders.
 	private Map<String, LoggerHolder> loggerMap = new HashMap<String, LoggerHolder>();
-
 	private List<AppenderHolder> appenderList = new ArrayList<AppenderHolder>();
-
 	private LoggerHolder rootLogger;
-
 	private AtomicBoolean showAppenderText = new AtomicBoolean(true);
+	private LauiContentUri mLauiContentUri;
 
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
@@ -110,9 +112,22 @@ public class LoggerEditor extends ListActivity {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.logger_editor);
 
+		String authority = getIntent().getStringExtra(EXTRA_NAME);
+		this.mListView = super.getListView();
+		if (authority != null) {
+			mLauiContentUri = new LauiContentUri(authority);
+		} else {
+			TextView emptyView = new TextView(this);
+			emptyView.setText("Unable to find ContentProvider with authority: "
+					+ authority);
+			this.mListView.setEmptyView(emptyView);
+			return;
+		}
+
 		// Query the Content Provider for the Appender list
 		Cursor cursor = getContentResolver().query(
-				CpConstants.AppenderTable.CONTENT_URI, null, null, null, null);
+				mLauiContentUri.getAppenderTableContentUri(), null, null, null,
+				null);
 
 		// We use this Map so that we can reference the same AppenderHolders
 		// each time we attach one to a LoggerHolder
@@ -137,7 +152,8 @@ public class LoggerEditor extends ListActivity {
 
 		// Query the Content Provider for the logger list
 		cursor = getContentResolver().query(
-				CpConstants.LoggerTable.CONTENT_URI, null, null, null, null);
+				mLauiContentUri.getLoggerTableContentUri(), null, null, null,
+				null);
 		List<LoggerHolder> tempList = new ArrayList<LoggerHolder>();
 
 		if (cursor != null && cursor.getCount() >= 1) {
@@ -158,19 +174,23 @@ public class LoggerEditor extends ListActivity {
 
 				String rawAppenderNames = cursor.getString(appenderIndex);
 				final LoggerHolder logger;
-				if(rawAppenderNames == null || rawAppenderNames.equals("")) {
+				if (rawAppenderNames == null || rawAppenderNames.equals("")) {
 					logger = new LoggerHolder(loggerName);
 				} else {
 					final String[] attachedNames = (rawAppenderNames == null) ? new String[0]
 							: rawAppenderNames.split(",");
-	
+
 					List<AppenderHolder> appenderList = new ArrayList<AppenderHolder>(
 							attachedNames.length);
-					
-					personalLogger.trace("Raw appender name String: {}", rawAppenderNames);
-					personalLogger.trace("Split String array: {}", Arrays.toString(attachedNames));
+
+					personalLogger.trace("Raw appender name String: {}",
+							rawAppenderNames);
+					personalLogger.trace("Split String array: {}",
+							Arrays.toString(attachedNames));
 					for (String appenderName : attachedNames) {
-						personalLogger.trace("Adding AppenderHolder {} to LoggerHolder {}", appenderName, loggerName);
+						personalLogger.trace(
+								"Adding AppenderHolder {} to LoggerHolder {}",
+								appenderName, loggerName);
 						AppenderHolder holder = tempMap.get(appenderName);
 						if (holder == null) {
 							holder = new AppenderHolder(appenderName);
@@ -180,7 +200,7 @@ public class LoggerEditor extends ListActivity {
 					}
 					logger = new LoggerHolder(loggerName, appenderList);
 				}
-				
+
 				logger.additivity = additivity;
 				logger.levelInt = levelInt;
 
@@ -206,14 +226,12 @@ public class LoggerEditor extends ListActivity {
 
 		this.loggerTree = makeTree(tempList);
 
-		this.mListView = super.getListView();
-
 		this.mAdapter = new LoggerIconAdapter(loggerTree, this,
 				R.layout.logger_row, R.id.logger_text);
 		this.setListAdapter(mAdapter);
 
 		this.selectionText = (TextView) findViewById(R.id.selection_text);
-		this.levelSpinner = (WellBehavedSpinner) findViewById(R.id.level_spinner);
+		this.levelSpinner = (NoDefaultSpinner) findViewById(R.id.level_spinner);
 
 		final ArrayAdapter<CharSequence> spinAdapter = ArrayAdapter
 				.createFromResource(this, R.array.level_options,
@@ -223,8 +241,7 @@ public class LoggerEditor extends ListActivity {
 
 		this.levelSpinner.setAdapter(spinAdapter);
 		this.spinnerListener = new MyOnSpinnerDialogClickListener();
-		this.levelSpinner.setOnSpinnerDialogClickListener(this.spinnerListener);
-		this.levelSpinner.setSelection(CLEAR_IX);
+		this.levelSpinner.setOnItemSelectedListener(this.spinnerListener);
 
 		// Set the selection text to indicate nothing is selected
 		this.updateSelText(null);
@@ -357,18 +374,10 @@ public class LoggerEditor extends ListActivity {
 
 		final LoggerHolder nextSelectedLogger = (LoggerHolder) parent
 				.getItemAtPosition(position);
-		final Level effective = getEffectiveLevel(nextSelectedLogger);
 
 		updateSelText(nextSelectedLogger.name);
-
-		if (this.selectedLogger == null) {
-			this.spinnerListener.updateSpinner(effective, this.levelSpinner);
-		} else if (nextSelectedLogger.equals(this.selectedLogger)) {
-			return;
-		} else if ((!effective.equals(getEffectiveLevel(selectedLogger)))
-				|| this.levelSpinner.getSelectedItemPosition() == CLEAR_IX) {
-			this.spinnerListener.updateSpinner(effective, this.levelSpinner);
-		}
+		levelSpinner.setHintSelected();
+		
 		this.selectedLogger = nextSelectedLogger;
 		this.selectedView = row;
 
@@ -749,7 +758,7 @@ public class LoggerEditor extends ListActivity {
 			} else {
 				holder.appenderIV.setImageBitmap(null);
 			}
-			
+
 			// We have to save the padding that was set on the row
 			// and reapply it after we set the background drawable
 			// since setBackgroundDrawable clears padding
@@ -757,13 +766,15 @@ public class LoggerEditor extends ListActivity {
 			final int leftPadding = row.getPaddingLeft();
 			final int topPadding = row.getPaddingTop();
 			final int bottomPadding = row.getPaddingBottom();
-			
-			if(selectedLogger == logger) {
-				row.setBackgroundDrawable(getResources().getDrawable(R.color.selected_logger_bg));
+
+			if (selectedLogger == logger) {
+				row.setBackgroundDrawable(getResources().getDrawable(
+						R.color.selected_logger_bg));
 			} else {
-				row.setBackgroundDrawable(getResources().getDrawable(android.R.drawable.list_selector_background));
+				row.setBackgroundDrawable(getResources().getDrawable(
+						android.R.drawable.list_selector_background));
 			}
-			
+
 			row.setPadding(leftPadding, topPadding, rightPadding, bottomPadding);
 
 			return row;
@@ -853,13 +864,13 @@ public class LoggerEditor extends ListActivity {
 				if (sb.length() > 0) {
 					sb.deleteCharAt(sb.length() - 1);
 				}
-				
+
 				personalLogger.trace("Selected logger attached appenders: {}",
 						selectedLogger.appenders.toString());
 				personalLogger.trace("Parent logger effective appenders: {}",
 						parentEffAppenders.toString());
-				
-				if(selectedLogger.appenders.equals(parentEffAppenders)) {
+
+				if (selectedLogger.appenders.equals(parentEffAppenders)) {
 					selectedLogger.additivity = true;
 					selectedLogger.appenders.clear();
 				} else {
@@ -867,7 +878,7 @@ public class LoggerEditor extends ListActivity {
 				}
 
 				Uri updateUri = ContentUris.withAppendedId(
-						CpConstants.LoggerTable.CONTENT_URI, 0);
+						mLauiContentUri.getLoggerTableContentUri(), 0);
 				ContentValues values = new ContentValues();
 				values.put(CpConstants.APPENDER_KEY, sb.toString());
 				parent.getContentResolver().update(updateUri, values,
@@ -941,45 +952,17 @@ public class LoggerEditor extends ListActivity {
 	 * the spinner makes use of this listener.
 	 */
 	public class MyOnSpinnerDialogClickListener implements
-			OnSpinnerDialogClickListener {
+			OnItemSelectedListener {
 
 		final LoggerEditor parent = LoggerEditor.this;
-
-		/**
-		 * Sets the current text on the Spinner to match the given Level
-		 * 
-		 * @param lvl
-		 */
-		public void updateSpinner(final Level lvl, final Spinner spinner) {
-
-			switch (lvl.levelInt) {
-			case Level.TRACE_INT:
-				spinner.setSelection(TRACE_IX);
-				break;
-			case Level.DEBUG_INT:
-				spinner.setSelection(DEBUG_IX);
-				break;
-			case Level.INFO_INT:
-				spinner.setSelection(INFO_IX);
-				break;
-			case Level.WARN_INT:
-				spinner.setSelection(WARN_IX);
-				break;
-			case Level.ERROR_INT:
-				spinner.setSelection(ERROR_IX);
-				break;
-			case Level.OFF_INT:
-			default:
-				spinner.setSelection(OFF_IX);
-			}
-		}
 
 		/**
 		 * Updates the logger and the icon in its row based on the selected
 		 * level.
 		 */
-		public void onSpinnerDialogClick(int which) {
-
+		@Override
+		public void onItemSelected(AdapterView<?> av, View view,
+				int position, long id) {
 			if (parent.selectedLogger == null) {
 				Toast.makeText(parent, "Please select a logger.",
 						Toast.LENGTH_SHORT).show();
@@ -991,7 +974,7 @@ public class LoggerEditor extends ListActivity {
 
 			final int nextLevelInt;
 
-			switch (which) {
+			switch (position) {
 			case TRACE_IX:
 				nextLevelInt = Level.TRACE_INT;
 				break;
@@ -1024,7 +1007,7 @@ public class LoggerEditor extends ListActivity {
 			parent.selectedLogger.levelInt = nextLevelInt;
 
 			Uri updateUri = ContentUris.withAppendedId(
-					CpConstants.LoggerTable.CONTENT_URI, 0);
+					mLauiContentUri.getLoggerTableContentUri(), 0);
 			ContentValues levelValues = new ContentValues();
 			levelValues.put(CpConstants.LEVEL_KEY, nextLevelInt);
 
@@ -1049,6 +1032,9 @@ public class LoggerEditor extends ListActivity {
 					parent.selectedView);
 
 		}
+
+		@Override
+		public void onNothingSelected(AdapterView<?> parent) { }
 
 	}
 
@@ -1116,7 +1102,7 @@ public class LoggerEditor extends ListActivity {
 		Collections.sort(list, AppenderHolder.COMPARATOR);
 		return list;
 	}
-	
+
 	// Just a wrapper for the recursive function
 	private Set<AppenderHolder> getEffectiveAppenderSet(LoggerHolder logger) {
 		return getEffectiveAppenders(new HashSet<AppenderHolder>(), logger);
