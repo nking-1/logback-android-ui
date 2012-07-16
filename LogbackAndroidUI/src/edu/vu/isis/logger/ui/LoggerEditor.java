@@ -20,6 +20,7 @@ import org.slf4j.LoggerFactory;
 
 import android.app.Dialog;
 import android.app.ListActivity;
+import android.content.ActivityNotFoundException;
 import android.content.BroadcastReceiver;
 import android.content.ContentUris;
 import android.content.ContentValues;
@@ -73,6 +74,7 @@ public class LoggerEditor extends ListActivity {
 
 	private static final int READ_MENU = Menu.NONE + 0;
 	private static final int TOGGLE_APPENDER_TEXT_MENU = Menu.NONE + 1;
+	private static final int RELOAD_MENU = Menu.NONE + 2;
 	private static final int LOAD_CONFIGURATION_MENU = Menu.NONE + 3;
 	private static final int SAVE_CONFIGURATION_MENU = Menu.NONE + 4;
 
@@ -112,123 +114,8 @@ public class LoggerEditor extends ListActivity {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.logger_editor);
 
-		String authority = getIntent().getStringExtra(EXTRA_NAME);
 		this.mListView = super.getListView();
-		if (authority != null) {
-			mLauiContentUri = new LauiContentUri(authority);
-		} else {
-			TextView emptyView = new TextView(this);
-			emptyView.setText("Unable to find ContentProvider with authority: "
-					+ authority);
-			this.mListView.setEmptyView(emptyView);
-			return;
-		}
-
-		// Query the Content Provider for the Appender list
-		Cursor cursor = getContentResolver().query(
-				mLauiContentUri.getAppenderTableContentUri(), null, null, null,
-				null);
-
-		// We use this Map so that we can reference the same AppenderHolders
-		// each time we attach one to a LoggerHolder
-		Map<String, AppenderHolder> tempMap = new HashMap<String, AppenderHolder>();
-
-		if (cursor != null && cursor.getCount() >= 1) {
-			while (cursor.moveToNext()) {
-
-				final int nameIndex = cursor
-						.getColumnIndex(CpConstants.AppenderTable.NAME);
-				final int filepathIndex = cursor
-						.getColumnIndex(CpConstants.AppenderTable.FILE_PATH_STRING);
-
-				String name = cursor.getString(nameIndex);
-				AppenderHolder appender = new AppenderHolder(name);
-				appender.filepath = cursor.getString(filepathIndex);
-
-				appenderList.add(appender);
-				tempMap.put(appender.name, appender);
-			}
-		}
-
-		// Query the Content Provider for the logger list
-		cursor = getContentResolver().query(
-				mLauiContentUri.getLoggerTableContentUri(), null, null, null,
-				null);
-		List<LoggerHolder> tempList = new ArrayList<LoggerHolder>();
-
-		if (cursor != null && cursor.getCount() >= 1) {
-			while (cursor.moveToNext()) {
-
-				final int nameIndex = cursor
-						.getColumnIndexOrThrow(CpConstants.LoggerTable.NAME);
-				final int levelIndex = cursor
-						.getColumnIndexOrThrow(CpConstants.LoggerTable.LEVEL_INT);
-				final int additivityIndex = cursor
-						.getColumnIndexOrThrow(CpConstants.LoggerTable.ADDITIVITY);
-				final int appenderIndex = cursor
-						.getColumnIndexOrThrow(CpConstants.LoggerTable.ATTACHED_APPENDER_NAMES);
-
-				final String loggerName = cursor.getString(nameIndex);
-				final int levelInt = cursor.getInt(levelIndex);
-				final boolean additivity = cursor.getInt(additivityIndex) == 1;
-
-				String rawAppenderNames = cursor.getString(appenderIndex);
-				final LoggerHolder logger;
-				if (rawAppenderNames == null || rawAppenderNames.equals("")) {
-					logger = new LoggerHolder(loggerName);
-				} else {
-					final String[] attachedNames = (rawAppenderNames == null) ? new String[0]
-							: rawAppenderNames.split(",");
-
-					List<AppenderHolder> appenderList = new ArrayList<AppenderHolder>(
-							attachedNames.length);
-
-					personalLogger.trace("Raw appender name String: {}",
-							rawAppenderNames);
-					personalLogger.trace("Split String array: {}",
-							Arrays.toString(attachedNames));
-					for (String appenderName : attachedNames) {
-						personalLogger.trace(
-								"Adding AppenderHolder {} to LoggerHolder {}",
-								appenderName, loggerName);
-						AppenderHolder holder = tempMap.get(appenderName);
-						if (holder == null) {
-							holder = new AppenderHolder(appenderName);
-							tempMap.put(holder.name, holder);
-						}
-						appenderList.add(holder);
-					}
-					logger = new LoggerHolder(loggerName, appenderList);
-				}
-
-				logger.additivity = additivity;
-				logger.levelInt = levelInt;
-
-				loggerMap.put(logger.name, logger);
-
-				/*
-				 * We want our ListView to show the Loggers in alphabetical
-				 * order. To keep from wasting time building a list from the
-				 * Collection of values in the Map and then sorting it
-				 * ourselves, we just make a temporary list of loggers along
-				 * with the map. The content provider originally got the list of
-				 * loggers from Logback, and Logback sorted the list before
-				 * returning it.
-				 */
-				tempList.add(logger);
-
-				if (logger.name.equals(Logger.ROOT_LOGGER_NAME)) {
-					rootLogger = logger;
-				}
-
-			}
-		}
-
-		this.loggerTree = makeTree(tempList);
-
-		this.mAdapter = new LoggerIconAdapter(loggerTree, this,
-				R.layout.logger_row, R.id.logger_text);
-		this.setListAdapter(mAdapter);
+		getDataAndSetUpList();
 
 		this.selectionText = (TextView) findViewById(R.id.selection_text);
 		this.levelSpinner = (NoDefaultSpinner) findViewById(R.id.level_spinner);
@@ -296,6 +183,121 @@ public class LoggerEditor extends ListActivity {
 		final boolean showAppText = this.showAppenderText.get();
 		outState.putBoolean("showAppText", showAppText);
 
+	}
+
+	private void getDataAndSetUpList() {
+		String authority = getIntent().getStringExtra(EXTRA_NAME);
+		if (authority != null) {
+			mLauiContentUri = new LauiContentUri(authority);
+		} else {
+			TextView emptyView = new TextView(this);
+			emptyView.setText("Unable to find ContentProvider with authority: "
+					+ authority);
+			this.mListView.setEmptyView(emptyView);
+			return;
+		}
+
+		// Query the Content Provider for the Appender list
+		Cursor cursor = getContentResolver().query(
+				mLauiContentUri.getAppenderTableContentUri(), null, null, null,
+				null);
+
+		// We use this Map so that we can reference the same AppenderHolders
+		// each time we attach one to a LoggerHolder
+		Map<String, AppenderHolder> tempMap = new HashMap<String, AppenderHolder>();
+
+		if (cursor != null && cursor.getCount() >= 1) {
+			final int nameIndex = cursor
+					.getColumnIndex(CpConstants.AppenderTable.NAME);
+			final int filepathIndex = cursor
+					.getColumnIndex(CpConstants.AppenderTable.FILE_PATH_STRING);
+			while (cursor.moveToNext()) {
+				String name = cursor.getString(nameIndex);
+				AppenderHolder appender = new AppenderHolder(name);
+				appender.filepath = cursor.getString(filepathIndex);
+
+				appenderList.add(appender);
+				tempMap.put(appender.name, appender);
+			}
+		}
+
+		// Query the Content Provider for the logger list
+		cursor = getContentResolver().query(
+				mLauiContentUri.getLoggerTableContentUri(), null, null, null,
+				null);
+		List<LoggerHolder> tempList = new ArrayList<LoggerHolder>();
+
+		if (cursor != null && cursor.getCount() >= 1) {
+			final int nameIndex = cursor
+					.getColumnIndexOrThrow(CpConstants.LoggerTable.NAME);
+			final int levelIndex = cursor
+					.getColumnIndexOrThrow(CpConstants.LoggerTable.LEVEL_INT);
+			final int additivityIndex = cursor
+					.getColumnIndexOrThrow(CpConstants.LoggerTable.ADDITIVITY);
+			final int appenderIndex = cursor
+					.getColumnIndexOrThrow(CpConstants.LoggerTable.ATTACHED_APPENDER_NAMES);
+			while (cursor.moveToNext()) {
+				final String loggerName = cursor.getString(nameIndex);
+				final int levelInt = cursor.getInt(levelIndex);
+				final boolean additivity = cursor.getInt(additivityIndex) == 1;
+
+				String rawAppenderNames = cursor.getString(appenderIndex);
+				final LoggerHolder logger;
+				if (rawAppenderNames == null || rawAppenderNames.equals("")) {
+					logger = new LoggerHolder(loggerName);
+				} else {
+					final String[] attachedNames = (rawAppenderNames == null) ? new String[0]
+							: rawAppenderNames.split(",");
+
+					List<AppenderHolder> appenderList = new ArrayList<AppenderHolder>(
+							attachedNames.length);
+
+					personalLogger.trace("Raw appender name String: {}",
+							rawAppenderNames);
+					personalLogger.trace("Split String array: {}",
+							Arrays.toString(attachedNames));
+					for (String appenderName : attachedNames) {
+						personalLogger.trace(
+								"Adding AppenderHolder {} to LoggerHolder {}",
+								appenderName, loggerName);
+						AppenderHolder holder = tempMap.get(appenderName);
+						if (holder == null) {
+							holder = new AppenderHolder(appenderName);
+							tempMap.put(holder.name, holder);
+						}
+						appenderList.add(holder);
+					}
+					logger = new LoggerHolder(loggerName, appenderList);
+				}
+
+				logger.additivity = additivity;
+				logger.levelInt = levelInt;
+
+				loggerMap.put(logger.name, logger);
+
+				/*
+				 * We want our ListView to show the Loggers in alphabetical
+				 * order. To keep from wasting time building a list from the
+				 * Collection of values in the Map and then sorting it
+				 * ourselves, we just make a temporary list of loggers along
+				 * with the map. The content provider originally got the list of
+				 * loggers from Logback, and Logback sorted the list before
+				 * returning it.
+				 */
+				tempList.add(logger);
+
+				if (logger.name.equals(Logger.ROOT_LOGGER_NAME)) {
+					rootLogger = logger;
+				}
+
+			}
+		}
+
+		this.loggerTree = makeTree(tempList);
+
+		this.mAdapter = new LoggerIconAdapter(loggerTree, this,
+				R.layout.logger_row, R.id.logger_text);
+		setListAdapter(mAdapter);
 	}
 
 	private Tree<LoggerHolder> makeTree(Collection<LoggerHolder> collection) {
@@ -377,7 +379,7 @@ public class LoggerEditor extends ListActivity {
 
 		updateSelText(nextSelectedLogger.name);
 		levelSpinner.setHintSelected();
-		
+
 		this.selectedLogger = nextSelectedLogger;
 		this.selectedView = row;
 
@@ -395,6 +397,7 @@ public class LoggerEditor extends ListActivity {
 		menu.add(Menu.NONE, READ_MENU, Menu.NONE, "Read logs");
 		menu.add(Menu.NONE, TOGGLE_APPENDER_TEXT_MENU, Menu.NONE,
 				"Toggle Appender text");
+		menu.add(Menu.NONE, RELOAD_MENU, Menu.NONE, "Reload Logger list");
 		menu.add(Menu.NONE, SAVE_CONFIGURATION_MENU, Menu.NONE,
 				"Save current logger settings");
 		menu.add(Menu.NONE, LOAD_CONFIGURATION_MENU, Menu.NONE,
@@ -416,6 +419,14 @@ public class LoggerEditor extends ListActivity {
 			this.showAppenderText.set(!this.showAppenderText.get());
 			refreshList();
 			break;
+		case RELOAD_MENU:
+			loggerMap.clear();
+			appenderList.clear();
+			rootLogger = null;
+			selectedLogger = null;
+			selectedView = null;
+			getDataAndSetUpList();
+			break;
 		case SAVE_CONFIGURATION_MENU:
 			promptForSave();
 			break;
@@ -423,7 +434,14 @@ public class LoggerEditor extends ListActivity {
 			if (mExternalStorageAvailable) {
 				Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
 				intent.setType("text/xml");
-				startActivityForResult(intent, PICKFILE_REQUEST_CODE);
+				try {
+					startActivityForResult(intent, PICKFILE_REQUEST_CODE);
+				} catch (ActivityNotFoundException e) {
+					// They didn't have an app that allows them to pick a file,
+					// so we display a crude dialog that just prompts them
+					// for a filepath
+					promptForLoad();
+				}
 			} else {
 				Toast.makeText(this, "Cannot read from external storage",
 						Toast.LENGTH_LONG).show();
@@ -436,30 +454,95 @@ public class LoggerEditor extends ListActivity {
 		return returnValue;
 	}
 
+	private void promptForLoad() {
+
+		final Dialog loadDialog = new Dialog(this);
+		loadDialog.setTitle("Load logger settings from file");
+		loadDialog.setContentView(R.layout.logger_file_dialog);
+
+		final EditText filenameEdit = (EditText) loadDialog
+				.findViewById(R.id.dialog_file_name_edit);
+		final EditText directoryEdit = (EditText) loadDialog
+				.findViewById(R.id.dialog_directory_edit);
+		final Button loadButton = (Button) loadDialog
+				.findViewById(R.id.dialog_confirm_button);
+		final Button cancelButton = (Button) loadDialog
+				.findViewById(R.id.dialog_cancel_button);
+		
+		loadButton.setText("Load");
+		directoryEdit.setText(Environment.getExternalStorageDirectory()
+				+ DEFAULT_SAVE_DIRECTORY);
+		
+		cancelButton.setOnClickListener(new View.OnClickListener() {
+			@Override
+			public void onClick(View v) {
+				loadDialog.dismiss();
+			}
+		});
+		
+		loadButton.setOnClickListener(new View.OnClickListener() {
+
+			@Override
+			public void onClick(View v) {
+				if (mExternalStorageWriteable) {
+
+					final String filenameEditStr = filenameEdit.getText()
+							.toString();
+
+					if (filenameEditStr.equals("")) {
+						Toast.makeText(LoggerEditor.this,
+								"Enter a nonempty filename", Toast.LENGTH_LONG)
+								.show();
+						return;
+					}
+
+					final String filename = formatFilename(filenameEditStr);
+					final String directory = directoryEdit.getText().toString();
+					
+					Uri loadUri = Uri.parse("file://"+directory+"/"+filename);
+					loadFile(loadUri);
+				}
+				loadDialog.dismiss();
+			}
+
+			private String formatFilename(String str) {
+				final String trimmed = str.trim();
+				if (!trimmed.endsWith(".xml")) {
+					return str += ".xml";
+				} else {
+					return trimmed;
+				}
+			}
+
+		});
+		
+		loadDialog.show();
+		
+	}
+
 	private void promptForSave() {
 
-		final Dialog myDialog = new Dialog(this);
+		final Dialog saveDialog = new Dialog(this);
+		saveDialog.setTitle("Save logger settings to file");
+		saveDialog.setContentView(R.layout.logger_file_dialog);
 
-		myDialog.setTitle("Save logger settings to file");
-		myDialog.setContentView(R.layout.logger_filesave_dialog);
-
-		final EditText filenameEdit = (EditText) myDialog
+		final EditText filenameEdit = (EditText) saveDialog
 				.findViewById(R.id.dialog_file_name_edit);
-		final EditText directoryEdit = (EditText) myDialog
+		final EditText directoryEdit = (EditText) saveDialog
 				.findViewById(R.id.dialog_directory_edit);
-		final Button saveButton = (Button) myDialog
-				.findViewById(R.id.dialog_file_save_button);
-		final Button cancelButton = (Button) myDialog
-				.findViewById(R.id.dialog_cancel_save_button);
+		final Button saveButton = (Button) saveDialog
+				.findViewById(R.id.dialog_confirm_button);
+		final Button cancelButton = (Button) saveDialog
+				.findViewById(R.id.dialog_cancel_button);
 
+		saveButton.setText("Save");
 		directoryEdit.setText(Environment.getExternalStorageDirectory()
 				+ DEFAULT_SAVE_DIRECTORY);
 
 		cancelButton.setOnClickListener(new View.OnClickListener() {
-
 			@Override
 			public void onClick(View v) {
-				myDialog.dismiss();
+				saveDialog.dismiss();
 			}
 		});
 
@@ -483,7 +566,7 @@ public class LoggerEditor extends ListActivity {
 					final String directory = directoryEdit.getText().toString();
 					saveFile(filename, directory);
 				}
-				myDialog.dismiss();
+				saveDialog.dismiss();
 			}
 
 			private String formatFilename(String str) {
@@ -497,7 +580,7 @@ public class LoggerEditor extends ListActivity {
 
 		});
 
-		myDialog.show();
+		saveDialog.show();
 
 	}
 
@@ -516,6 +599,9 @@ public class LoggerEditor extends ListActivity {
 		PrintStream outStream = null;
 		try {
 			outStream = new PrintStream(directory + "/" + filename);
+			for (LoggerHolder logger : loggerMap.values()) {
+				writeXML(outStream, logger);
+			}
 		} catch (FileNotFoundException e) {
 			personalLogger.error("FileNotFoundException! Unable to write file");
 			e.printStackTrace();
@@ -525,10 +611,6 @@ public class LoggerEditor extends ListActivity {
 				outStream.flush();
 				outStream.close();
 			}
-		}
-
-		for (LoggerHolder logger : loggerMap.values()) {
-			writeXML(outStream, logger);
 		}
 
 	}
@@ -961,8 +1043,8 @@ public class LoggerEditor extends ListActivity {
 		 * level.
 		 */
 		@Override
-		public void onItemSelected(AdapterView<?> av, View view,
-				int position, long id) {
+		public void onItemSelected(AdapterView<?> av, View view, int position,
+				long id) {
 			if (parent.selectedLogger == null) {
 				Toast.makeText(parent, "Please select a logger.",
 						Toast.LENGTH_SHORT).show();
@@ -1034,7 +1116,8 @@ public class LoggerEditor extends ListActivity {
 		}
 
 		@Override
-		public void onNothingSelected(AdapterView<?> parent) { }
+		public void onNothingSelected(AdapterView<?> parent) {
+		}
 
 	}
 
