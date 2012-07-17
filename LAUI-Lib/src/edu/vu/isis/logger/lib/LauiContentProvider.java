@@ -83,9 +83,7 @@ public class LauiContentProvider extends ContentProvider {
 	public static final String LEVEL_KEY = "level";
 	public static final String APPENDER_KEY = "appender";
 
-	private static UriMatcher URI_MATCHER = new UriMatcher(UriMatcher.NO_MATCH);;
-	public static final Uri OP_NOT_SUPPORTED = Uri
-			.parse("That operation is not supported");
+	private static UriMatcher URI_MATCHER = new UriMatcher(UriMatcher.NO_MATCH);
 
 	/** Indicates a null level on a logger */
 	public static final int NO_LEVEL = -152;
@@ -270,11 +268,11 @@ public class LauiContentProvider extends ContentProvider {
 	/**
 	 * This operation is not supported by this ContentProvider
 	 * 
-	 * @return OP_NOT_SUPPORTED (operation not supported)
+	 * @throws UnsupportedOperationException
 	 */
 	@Override
 	public Uri insert(Uri uri, ContentValues values) {
-		return OP_NOT_SUPPORTED;
+		throw new UnsupportedOperationException();
 	}
 
 	/**
