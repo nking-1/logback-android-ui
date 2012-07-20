@@ -2,12 +2,9 @@ package edu.vu.isis.logger.util;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import net.jcip.annotations.ThreadSafe;
-
 import android.content.Context;
 import android.os.Handler;
 
-@ThreadSafe
 public class LogReader {
 	
 	/** the handler to which Messages are sent */
@@ -28,11 +25,9 @@ public class LogReader {
 	 * Tells this LogReader to start itself
 	 */
 	public void start() {
-		
 		if(this.hasBeenStarted.getAndSet(true)) {
 			throw new IllegalStateException("This LogReader has already been started");
 		}
-		
 	}
 	
 	
@@ -134,7 +129,6 @@ public class LogReader {
 		default:
 			return LogLevel.None;
 		}
-		
 	}
 	
 	

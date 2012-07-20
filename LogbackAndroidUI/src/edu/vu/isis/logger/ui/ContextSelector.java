@@ -24,9 +24,19 @@ public class ContextSelector extends ListActivity {
 
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
-
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.context_selector);
+	}
+
+	@Override
+	public void onStart() {
+		super.onStart();
+		findContentProviders();
+		setListAdapter(new AppHolderAdapter());
+	}
+
+	private void findContentProviders() {
+		mAppList.clear();
 
 		final PackageManager pm = getPackageManager();
 		final List<PackageInfo> packageList = pm
@@ -48,9 +58,16 @@ public class ContextSelector extends ListActivity {
 				}
 			}
 		}
+	}
 
-		setListAdapter(new AppHolderAdapter());
-
+	public void viewLogcat(View v) {
+		Intent intent = new Intent();
+		intent.setClass(this, LogcatLogViewer.class);
+		startActivity(intent);
+	}
+	
+	public void refreshList(View v) {
+		findContentProviders();
 	}
 
 	@Override
@@ -64,7 +81,7 @@ public class ContextSelector extends ListActivity {
 		startActivity(intent);
 	}
 
-	private class AppHolder {
+	private static class AppHolder {
 
 		private Drawable icon;
 		private CharSequence label;
@@ -72,7 +89,7 @@ public class ContextSelector extends ListActivity {
 
 	}
 
-	private class ViewHolder {
+	private static class ViewHolder {
 		private TextView tv;
 	}
 
@@ -98,7 +115,8 @@ public class ContextSelector extends ListActivity {
 			final View row;
 			if (convertView == null) {
 				LayoutInflater inflater = getLayoutInflater();
-				row = inflater.inflate(R.layout.context_selector_row, parent, false);
+				row = inflater.inflate(R.layout.context_selector_row, parent,
+						false);
 			} else {
 				row = convertView;
 			}

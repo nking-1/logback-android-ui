@@ -2,8 +2,11 @@ package edu.vu.isis.logger.ui;
 
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.io.InputStream;
-import java.io.PrintStream;
+import java.io.OutputStream;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -16,7 +19,11 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import org.slf4j.LoggerFactory;
+import org.xml.sax.Attributes;
+import org.xml.sax.ContentHandler;
+import org.xml.sax.SAXException;
+import org.xml.sax.helpers.DefaultHandler;
+import org.xmlpull.v1.XmlSerializer;
 
 import android.app.Dialog;
 import android.app.ListActivity;
@@ -33,6 +40,7 @@ import android.database.Cursor;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
+import android.util.Xml;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -50,15 +58,10 @@ import android.widget.TextView;
 import android.widget.Toast;
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
-import ch.qos.logback.core.joran.action.Action;
-import ch.qos.logback.core.joran.spi.JoranException;
-import ch.qos.logback.core.joran.spi.Pattern;
 import edu.vu.isis.logger.R;
 import edu.vu.isis.logger.provider.CpConstants;
 import edu.vu.isis.logger.provider.LauiContentUri;
-import edu.vu.isis.logger.util.LoggerConfigureAction;
 import edu.vu.isis.logger.util.Loggers;
-import edu.vu.isis.logger.util.SimpleConfigurator;
 import edu.vu.isis.logger.util.Tree;
 import edu.vu.isis.logger.util.TreeAdapter;
 
@@ -103,6 +106,11 @@ public class LoggerEditor extends ListActivity {
 	// a list every time. This is mainly used when we make the tree of
 	// LoggerHolders.
 	private Map<String, LoggerHolder> loggerMap = new HashMap<String, LoggerHolder>();
+
+	// We use this Map so that we can reference the same AppenderHolders
+	// each time we attach one to a LoggerHolder
+	private Map<String, AppenderHolder> appenderMap = new HashMap<String, AppenderHolder>();
+
 	private List<AppenderHolder> appenderList = new ArrayList<AppenderHolder>();
 	private LoggerHolder rootLogger;
 	private AtomicBoolean showAppenderText = new AtomicBoolean(true);
@@ -202,10 +210,6 @@ public class LoggerEditor extends ListActivity {
 				mLauiContentUri.getAppenderTableContentUri(), null, null, null,
 				null);
 
-		// We use this Map so that we can reference the same AppenderHolders
-		// each time we attach one to a LoggerHolder
-		Map<String, AppenderHolder> tempMap = new HashMap<String, AppenderHolder>();
-
 		if (cursor != null && cursor.getCount() >= 1) {
 			final int nameIndex = cursor
 					.getColumnIndex(CpConstants.AppenderTable.NAME);
@@ -217,7 +221,7 @@ public class LoggerEditor extends ListActivity {
 				appender.filepath = cursor.getString(filepathIndex);
 
 				appenderList.add(appender);
-				tempMap.put(appender.name, appender);
+				appenderMap.put(appender.name, appender);
 			}
 		}
 
@@ -260,10 +264,10 @@ public class LoggerEditor extends ListActivity {
 						personalLogger.trace(
 								"Adding AppenderHolder {} to LoggerHolder {}",
 								appenderName, loggerName);
-						AppenderHolder holder = tempMap.get(appenderName);
+						AppenderHolder holder = appenderMap.get(appenderName);
 						if (holder == null) {
 							holder = new AppenderHolder(appenderName);
-							tempMap.put(holder.name, holder);
+							appenderMap.put(holder.name, holder);
 						}
 						appenderList.add(holder);
 					}
@@ -399,7 +403,7 @@ public class LoggerEditor extends ListActivity {
 				"Toggle Appender text");
 		menu.add(Menu.NONE, RELOAD_MENU, Menu.NONE, "Reload Logger list");
 		menu.add(Menu.NONE, SAVE_CONFIGURATION_MENU, Menu.NONE,
-				"Save current logger settings");
+				"Save logger settings");
 		menu.add(Menu.NONE, LOAD_CONFIGURATION_MENU, Menu.NONE,
 				"Load logger settings");
 
@@ -409,7 +413,6 @@ public class LoggerEditor extends ListActivity {
 
 	@Override
 	public boolean onOptionsItemSelected(MenuItem item) {
-
 		boolean returnValue = true;
 		switch (item.getItemId()) {
 		case READ_MENU:
@@ -438,8 +441,8 @@ public class LoggerEditor extends ListActivity {
 					startActivityForResult(intent, PICKFILE_REQUEST_CODE);
 				} catch (ActivityNotFoundException e) {
 					// They didn't have an app that allows them to pick a file,
-					// so we display a crude dialog that just prompts them
-					// for a filepath
+					// so we display a dialog that just prompts them
+					// for a file
 					promptForLoad();
 				}
 			} else {
@@ -450,199 +453,247 @@ public class LoggerEditor extends ListActivity {
 		default:
 			returnValue = false;
 		}
-
 		return returnValue;
 	}
 
 	private void promptForLoad() {
-
-		final Dialog loadDialog = new Dialog(this);
-		loadDialog.setTitle("Load logger settings from file");
-		loadDialog.setContentView(R.layout.logger_file_dialog);
-
-		final EditText filenameEdit = (EditText) loadDialog
-				.findViewById(R.id.dialog_file_name_edit);
-		final EditText directoryEdit = (EditText) loadDialog
-				.findViewById(R.id.dialog_directory_edit);
-		final Button loadButton = (Button) loadDialog
-				.findViewById(R.id.dialog_confirm_button);
-		final Button cancelButton = (Button) loadDialog
-				.findViewById(R.id.dialog_cancel_button);
-		
-		loadButton.setText("Load");
-		directoryEdit.setText(Environment.getExternalStorageDirectory()
-				+ DEFAULT_SAVE_DIRECTORY);
-		
-		cancelButton.setOnClickListener(new View.OnClickListener() {
-			@Override
-			public void onClick(View v) {
-				loadDialog.dismiss();
-			}
-		});
-		
-		loadButton.setOnClickListener(new View.OnClickListener() {
-
-			@Override
-			public void onClick(View v) {
-				if (mExternalStorageWriteable) {
-
-					final String filenameEditStr = filenameEdit.getText()
-							.toString();
-
-					if (filenameEditStr.equals("")) {
-						Toast.makeText(LoggerEditor.this,
-								"Enter a nonempty filename", Toast.LENGTH_LONG)
-								.show();
-						return;
-					}
-
-					final String filename = formatFilename(filenameEditStr);
-					final String directory = directoryEdit.getText().toString();
-					
-					Uri loadUri = Uri.parse("file://"+directory+"/"+filename);
-					loadFile(loadUri);
-				}
-				loadDialog.dismiss();
-			}
-
-			private String formatFilename(String str) {
-				final String trimmed = str.trim();
-				if (!trimmed.endsWith(".xml")) {
-					return str += ".xml";
-				} else {
-					return trimmed;
-				}
-			}
-
-		});
-		
-		loadDialog.show();
-		
+		try {
+			Class<?> types[] = new Class<?>[] { String.class, String.class };
+			Method m = LoggerEditor.class.getDeclaredMethod("loadFile", types);
+			makePrompt("Load logger settings from file", "Load", m);
+		} catch (NoSuchMethodException e) {
+			personalLogger.error("Error finding loadFile method", e);
+		}
 	}
 
 	private void promptForSave() {
+		try {
+			Class<?> types[] = new Class<?>[] { String.class, String.class };
+			Method m = LoggerEditor.class.getDeclaredMethod("saveFile", types);
+			makePrompt("Save logger settings to file", "Save", m);
+		} catch (NoSuchMethodException e) {
+			personalLogger.error("Error finding saveFile method", e);
+		}
+	}
 
-		final Dialog saveDialog = new Dialog(this);
-		saveDialog.setTitle("Save logger settings to file");
-		saveDialog.setContentView(R.layout.logger_file_dialog);
+	private void makePrompt(String title, String confirmButtonStr,
+			final Method confirmButtonMethod) {
+		final Dialog dialog = new Dialog(this);
+		dialog.setTitle(title);
+		dialog.setContentView(R.layout.logger_file_dialog);
 
-		final EditText filenameEdit = (EditText) saveDialog
+		final EditText filenameEdit = (EditText) dialog
 				.findViewById(R.id.dialog_file_name_edit);
-		final EditText directoryEdit = (EditText) saveDialog
+		final EditText directoryEdit = (EditText) dialog
 				.findViewById(R.id.dialog_directory_edit);
-		final Button saveButton = (Button) saveDialog
+		final Button confirmButton = (Button) dialog
 				.findViewById(R.id.dialog_confirm_button);
-		final Button cancelButton = (Button) saveDialog
+		final Button cancelButton = (Button) dialog
 				.findViewById(R.id.dialog_cancel_button);
 
-		saveButton.setText("Save");
+		confirmButton.setText(confirmButtonStr);
 		directoryEdit.setText(Environment.getExternalStorageDirectory()
 				+ DEFAULT_SAVE_DIRECTORY);
 
 		cancelButton.setOnClickListener(new View.OnClickListener() {
 			@Override
 			public void onClick(View v) {
-				saveDialog.dismiss();
+				dialog.dismiss();
 			}
 		});
 
-		saveButton.setOnClickListener(new View.OnClickListener() {
+		confirmButton.setOnClickListener(new View.OnClickListener() {
 
 			@Override
 			public void onClick(View v) {
 				if (mExternalStorageWriteable) {
-
-					final String filenameEditStr = filenameEdit.getText()
-							.toString();
-
-					if (filenameEditStr.equals("")) {
+					String filename = filenameEdit.getText().toString();
+					if (filename.equals("")) {
 						Toast.makeText(LoggerEditor.this,
 								"Enter a nonempty filename", Toast.LENGTH_LONG)
 								.show();
 						return;
 					}
+					String directory = directoryEdit.getText().toString();
+					if (directory.equals("")) {
+						Toast.makeText(LoggerEditor.this,
+								"Empter a nonempty directory",
+								Toast.LENGTH_LONG).show();
+						return;
+					}
 
-					final String filename = formatFilename(filenameEditStr);
-					final String directory = directoryEdit.getText().toString();
-					saveFile(filename, directory);
+					filename = format(filename, ".xml");
+					directory = format(directory, "/");
+					try {
+						confirmButtonMethod.setAccessible(true);
+						confirmButtonMethod.invoke(LoggerEditor.this, filename,
+								directory);
+					} catch (Exception e) {
+						personalLogger.error("Error when invoking method {}",
+								confirmButtonMethod.getName(), e);
+					}
 				}
-				saveDialog.dismiss();
+				dialog.dismiss();
 			}
 
-			private String formatFilename(String str) {
-				final String trimmed = str.trim();
-				if (!trimmed.endsWith(".xml")) {
-					return str += ".xml";
-				} else {
-					return trimmed;
+			private String format(String str, String properEnding) {
+				str = str.trim();
+				if (!str.endsWith(properEnding)) {
+					str += properEnding;
 				}
+				return str;
 			}
 
 		});
 
-		saveDialog.show();
-
+		dialog.show();
 	}
 
+	// This is called reflectively by the dialog
+	@SuppressWarnings("unused")
 	private void saveFile(String filename, String directory) {
-		final File dirs = new File(directory);
+		final File dirFile = new File(directory);
+		final File file = new File(directory + filename);
 
-		if (dirs.mkdirs()) {
+		if (dirFile.mkdirs()) {
 			personalLogger.info("Directory {} was created for save",
-					dirs.getAbsolutePath());
+					dirFile.getAbsolutePath());
 		} else {
 			personalLogger.info("Directory {} was not created for save",
-					dirs.getAbsolutePath());
+					dirFile.getAbsolutePath());
 		}
 
 		// TODO: Make sure this is okay according to Android IO conventions
-		PrintStream outStream = null;
+		OutputStream fos = null;
 		try {
-			outStream = new PrintStream(directory + "/" + filename);
-			for (LoggerHolder logger : loggerMap.values()) {
-				writeXML(outStream, logger);
-			}
+			fos = new FileOutputStream(file);
+			writeXML(fos);
 		} catch (FileNotFoundException e) {
-			personalLogger.error("FileNotFoundException! Unable to write file");
-			e.printStackTrace();
-			return;
+			personalLogger.error(
+					"FileNotFoundException! Unable to write file {}.", file, e);
 		} finally {
-			if (outStream != null) {
-				outStream.flush();
-				outStream.close();
+			if (fos != null) {
+				try {
+					fos.flush();
+					fos.close();
+				} catch (IOException e) {
+					personalLogger.error(
+							"Exception when closing output stream for file {}",
+							file, e);
+				}
 			}
+		}
+	}
+
+	// This is called reflectively by the dialog
+	@SuppressWarnings("unused")
+	private void loadFile(String directory, String filename) {
+		Uri loadUri = Uri.parse("file://" + directory + "/" + filename);
+		loadFile(loadUri);
+	}
+
+	private void loadFile(Uri fileUri) {
+		InputStream fis = null;
+		try {
+			fis = getContentResolver().openInputStream(fileUri);
+			ContentHandler handler = new LoggerXmlHandler();
+			Xml.parse(fis, Xml.Encoding.UTF_8, handler);
+		} catch (FileNotFoundException e) {
+			personalLogger.error("File not found: {}", fileUri);
+			Toast.makeText(this, "File not found", Toast.LENGTH_LONG).show();
+		} catch (IOException e) {
+			personalLogger.error("IOException when reading XML file: {}",
+					fileUri, e);
+		} catch (SAXException e) {
+			personalLogger.error("SAX fatal error when reading XML file: {}",
+					fileUri, e);
+		} finally {
+			if (fis == null) {
+				return;
+			}
+			try {
+				fis.close();
+			} catch (IOException e) {
+				personalLogger.error("Error closing input stream for file: {}",
+						fileUri, e);
+			}
+		}
+		mListView.invalidateViews();
+	}
+
+	private static final String LEVEL_ATT = "level";
+	private static final String NAME_ATT = "name";
+	private static final String APPENDER_ATT = "appender";
+	private static final String ADDITIVITY_ATT = "additivity";
+
+	private class LoggerXmlHandler extends DefaultHandler {
+
+		@Override
+		public void startElement(String namespaceURI, String localName,
+				String qName, Attributes atts) throws SAXException {
+			if (!localName.equals("logger")) {
+				personalLogger.error("Got a bad tag: {}. Skipping", localName);
+				return;
+			}
+
+			String levelStr = atts.getValue(LEVEL_ATT);
+			String nameStr = atts.getValue(NAME_ATT);
+			String additivityStr = atts.getValue(ADDITIVITY_ATT);
+			String appenderStr = atts.getValue(APPENDER_ATT);
+
+			if (levelStr == null || nameStr == null || additivityStr == null
+					|| appenderStr == null) {
+				personalLogger
+						.error("One of the XML attributes was null. Skipping");
+			}
+
+			LoggerHolder logger = loggerMap.get(nameStr);
+			if (logger == null) {
+				personalLogger.warn("Logger {} was not found.  Skipping",
+						nameStr);
+			}
+
+			Set<AppenderHolder> appenderSet = new HashSet<AppenderHolder>();
+			for (String appenderName : appenderStr.split(" ")) {
+				AppenderHolder appender = appenderMap.get(appenderName.trim());
+				appenderSet.add(appender);
+			}
+
+			logger.levelInt = levelStr.equals("null") ? CpConstants.NO_LEVEL : Level.valueOf(levelStr).toInteger();
+			logger.additivity = Boolean.valueOf(additivityStr);
+			logger.appenders = appenderSet;
 		}
 
 	}
 
-	private void writeXML(PrintStream outStream, LoggerHolder logger) {
-		final String name = logger.name;
-		final int levelInt = logger.levelInt;
-		final String appenderStr = makeAppenderStr(logger.appenders);
-		final String additivityStr = Boolean.toString(logger.additivity);
-
-		final StringBuilder bldr = new StringBuilder();
-		final String openQuoteStr = "=\"";
-		final String closeQuoteStr = "\" ";
-
-		bldr.append("<logger ").append(LoggerConfigureAction.NAME_ATR)
-				.append(openQuoteStr).append(name).append(closeQuoteStr)
-				.append(LoggerConfigureAction.LEVEL_ATR).append(openQuoteStr)
-				.append(levelInt).append(closeQuoteStr)
-				.append(LoggerConfigureAction.APPENDER_ATR)
-				.append(openQuoteStr).append(appenderStr).append(closeQuoteStr)
-				.append(LoggerConfigureAction.ADDITIVITY_ATR)
-				.append(openQuoteStr).append(additivityStr)
-				.append(closeQuoteStr).append("/>");
-		final String outputStr = bldr.toString();
-
-		personalLogger.trace("Writing line to file: {}", outputStr);
-		outStream.println(outputStr);
+	private void writeXML(OutputStream os) {
+		XmlSerializer serializer = Xml.newSerializer();
+		try {
+			serializer.setOutput(os, "UTF-8");
+			serializer.startDocument("UTF-8", true);
+			for (LoggerHolder logger : loggerMap.values()) {
+				serializer.startTag("", "logger");
+				serializer.attribute("", NAME_ATT, logger.name);
+				serializer.attribute("", LEVEL_ATT,
+						(logger.levelInt != CpConstants.NO_LEVEL) ? Level
+								.toLevel(logger.levelInt).toString() : "null");
+				serializer.attribute("", APPENDER_ATT,
+						makeAppenderStr(logger.appenders));
+				serializer.attribute("", ADDITIVITY_ATT,
+						Boolean.toString(logger.additivity));
+				serializer.endTag("", "logger");
+			}
+			serializer.endDocument();
+		} catch (IOException e) {
+			final String errorMessage = "Error saving XML file";
+			personalLogger.error(errorMessage, e);
+			Toast.makeText(this, errorMessage, Toast.LENGTH_LONG).show();
+		}
 	}
 
 	private String makeAppenderStr(Collection<AppenderHolder> appenders) {
 		if (appenders.isEmpty())
-			return LoggerConfigureAction.NO_APPENDER_STR;
+			return "none";
 
 		StringBuilder bldr = new StringBuilder();
 		for (AppenderHolder holder : appenders) {
@@ -889,7 +940,8 @@ public class LoggerEditor extends ListActivity {
 
 		if (selectedLogger == null) {
 			Toast.makeText(this, "Please select a Logger first",
-					Toast.LENGTH_SHORT);
+					Toast.LENGTH_SHORT).show();
+			return;
 		}
 
 		final Dialog dialog = new Dialog(this);
@@ -989,45 +1041,6 @@ public class LoggerEditor extends ListActivity {
 		default:
 			break;
 		}
-	}
-
-	private void loadFile(Uri fileUri) {
-
-		final InputStream fileInputStream;
-
-		try {
-			fileInputStream = getContentResolver().openInputStream(fileUri);
-		} catch (FileNotFoundException e) {
-			Toast.makeText(this, "Could not find file: " + fileUri,
-					Toast.LENGTH_LONG);
-			e.printStackTrace();
-			return;
-		}
-
-		final Map<Pattern, Action> ruleMap = new HashMap<Pattern, Action>();
-		ruleMap.put(new Pattern("logger"), new LoggerConfigureAction());
-
-		final SimpleConfigurator simpleConfigurator = new SimpleConfigurator(
-				ruleMap);
-
-		// link the configurator with its context
-		// Note that logback has its own Context class, which conflicts
-		// with the Android Context, hence the ugly type cast
-		simpleConfigurator
-				.setContext((ch.qos.logback.core.Context) LoggerFactory
-						.getILoggerFactory());
-
-		try {
-			simpleConfigurator.doConfigure(fileInputStream);
-		} catch (JoranException e) {
-			final String errorMessage = "Error loading file: could not parse XML";
-			personalLogger.error(errorMessage);
-			Toast.makeText(this, errorMessage, Toast.LENGTH_LONG).show();
-			e.printStackTrace();
-		}
-
-		refreshList();
-
 	}
 
 	/**
