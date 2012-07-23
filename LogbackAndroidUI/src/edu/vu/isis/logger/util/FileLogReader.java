@@ -144,7 +144,7 @@ public class FileLogReader extends LogReader {
 			// Trim off the EOF character given to us by ByteBuffers
 			str = str.substring(0, str.length() - 1);
 		}
-		return new LogElement(getCorrespondingLevel(str), str);
+		return new LogElement(getCorrespondingLevelIfIsColored(str), str);
 	}
 
 	/**
@@ -162,7 +162,7 @@ public class FileLogReader extends LogReader {
 			// Trim off the BOF character given to us by ByteBuffers
 			str = str.substring(1);
 		}
-		return new LogElement(getCorrespondingLevel(str), str);
+		return new LogElement(getCorrespondingLevelIfIsColored(str), str);
 	}
 
 	public boolean atEndOfFile() {
@@ -190,8 +190,8 @@ public class FileLogReader extends LogReader {
 			// Return early if we reach the end of the file
 			if (str[i].equals(ByteBuffers.END_OF_TEXT_STR))
 				return logList;
-			LogElement element = new LogElement(getCorrespondingLevel(str[i]),
-					str[i]);
+			LogElement element = new LogElement(
+					getCorrespondingLevelIfIsColored(str[i]), str[i]);
 			logList.add(element);
 		}
 
@@ -217,8 +217,8 @@ public class FileLogReader extends LogReader {
 			// Return early if we reach the end of the file
 			if (str[i].equals(ByteBuffers.END_OF_TEXT_STR))
 				return logList;
-			LogElement element = new LogElement(getCorrespondingLevel(str[i]),
-					str[i]);
+			LogElement element = new LogElement(
+					getCorrespondingLevelIfIsColored(str[i]), str[i]);
 			logList.add(element);
 		}
 

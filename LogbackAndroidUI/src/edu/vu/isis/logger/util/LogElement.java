@@ -24,6 +24,12 @@ public class LogElement {
 		return this.mLevel;
 	}
 	
+	// The LogLevel field was made mutable so we can
+	// efficiently and easily recolor logs if necessary
+	public void setLogLevel(LogLevel newLevel) {
+		mLevel = newLevel;
+	}
+	
 	public String getMessage() {
 		return this.mMessage;
 	}
@@ -35,7 +41,7 @@ public class LogElement {
 	
 	@Override
 	public int hashCode() {
-		int result = 731;
+		int result = 17;
 		result = 31 * result + mLevel.hashCode();
 		result = 31 * result + mMessage.hashCode();
 		return result;

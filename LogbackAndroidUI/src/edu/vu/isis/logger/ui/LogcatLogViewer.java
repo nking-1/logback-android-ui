@@ -4,12 +4,9 @@ import java.io.IOException;
 import java.util.List;
 
 import android.content.Intent;
-import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
-import android.preference.PreferenceManager;
-import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.Toast;
 import edu.vu.isis.logger.util.LogElement;
@@ -25,13 +22,6 @@ import edu.vu.isis.logger.util.LogcatLogReader;
  */
 public class LogcatLogViewer extends LogViewerBase {
 
-	// Menu constants
-	private static final int JUMP_TOP_MENU = Menu.NONE + 1;
-	private static final int JUMP_BOTTOM_MENU = Menu.NONE + 2;
-	private static final int OPEN_PREFS_MENU = Menu.NONE + 3;
-
-	private SharedPreferences prefs;
-
 	public Handler mHandler = new Handler() {
 
 		LogcatLogViewer parent = LogcatLogViewer.this;
@@ -44,9 +34,11 @@ public class LogcatLogViewer extends LogViewerBase {
 				if (msg.obj != null) {
 					@SuppressWarnings("unchecked")
 					final List<LogElement> elemList = (List<LogElement>) msg.obj;
-					final boolean jumpDown = (mListView.getLastVisiblePosition() == mAdapter.getCount()-1);
+					final boolean jumpDown = (mListView
+							.getLastVisiblePosition() == mAdapter.getCount() - 1);
 					mAdapter.addAll(elemList);
-					if(jumpDown) mListView.setSelection(mAdapter.getCount()-1);
+					if (jumpDown)
+						mListView.setSelection(mAdapter.getCount() - 1);
 				}
 				break;
 			case LogcatLogReader.NOTIFY_INVALID_REGEX_MSG:
@@ -54,7 +46,8 @@ public class LogcatLogViewer extends LogViewerBase {
 						Toast.LENGTH_LONG).show();
 				break;
 			default:
-				parent.logger.error("Handler received malformed message");
+				LogcatLogViewer.logger
+						.error("Handler received malformed message");
 			}
 
 		}
@@ -65,48 +58,12 @@ public class LogcatLogViewer extends LogViewerBase {
 	public void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 
-		prefs = PreferenceManager.getDefaultSharedPreferences(this);
-		String regex = prefs.getString("regular_expression", "");
+		String regex = mPrefs.getString("regular_expression", "");
 
-		try {
-			mLogReader = new LogcatLogReader(this, mHandler, regex);
-		} catch (IOException e) {
-			final String errorMsg = "Could not read from Logcat";
-			logger.error(errorMsg);
-			e.printStackTrace();
-			Toast.makeText(this, errorMsg, Toast.LENGTH_LONG).show();
-			return;
-		}
-
-		mLogReader.start();
-	}
-
-	@Override
-	public void onResume() {
-		super.onResume();
-		// This code reconfigures things according to the set preferences
+		openLogReader(regex);
 		configureMaxLinesFromPrefs();
-		String regex = prefs.getString("regular_expression", "");
-
-		// Our superclass will take care of retrieving the log reader
-		// if we left this activity to change the preferences
-		if (mLogReader != null) {
-			((LogcatLogReader) mLogReader).setRegex(regex);
-			return;
-		}
-	}
-
-	@Override
-	public boolean onPrepareOptionsMenu(Menu menu) {
-
-		final boolean returnValue = true && super.onPrepareOptionsMenu(menu);
-
-		menu.add(Menu.NONE, JUMP_BOTTOM_MENU, Menu.NONE, "Go to bottom");
-		menu.add(Menu.NONE, JUMP_TOP_MENU, Menu.NONE, "Go to top");
-		menu.add(Menu.NONE, OPEN_PREFS_MENU, Menu.NONE, "Open preferences");
-
-		return returnValue;
-
+		setupColoringFromPrefs("colored_logcat_logs");
+		mLogReader.start();
 	}
 
 	@Override
@@ -120,6 +77,8 @@ public class LogcatLogViewer extends LogViewerBase {
 			setScrollToTop();
 			break;
 		case OPEN_PREFS_MENU:
+			// Pause reading until we're done resetting the preferences
+			mLogReader.pause();
 			final Intent intent = new Intent().setClass(this,
 					LogViewerPreferences.class);
 			startActivityForResult(intent, 0);
@@ -133,21 +92,58 @@ public class LogcatLogViewer extends LogViewerBase {
 	@Override
 	public void onActivityResult(int requestCode, int resultCode, Intent data) {
 
-		// Pause reading until we're done resetting the max lines
-		mLogReader.pause();
-
 		configureMaxLinesFromPrefs();
+		String regex = mPrefs.getString("regular_expression", "");
+		boolean startReader = false;
+		if (!regex.equals(((LogcatLogReader) mLogReader).getRegex())) {
+			openLogReader(regex);
+			// The intended behavior is for the LogReader to resume regardless
+			// of whether or not it was previously paused if the regex was
+			// changed. We want to reread everything and compare it all
+			// against the new regex.
+			isPaused.set(false);
+			mAdapter.clear();
+			startReader = true;
+		}
 
+		boolean wasColored = mLogReader.isColored();
+		setupColoringFromPrefs("colored_logcat_logs");
+
+		if (wasColored != mLogReader.isColored()) {
+			((LogcatLogReader)mLogReader).forceUpdate();
+			recolorLogsInAdapter();
+			mListView.invalidateViews();
+		}
+
+		if (startReader) {
+			mLogReader.start();
+			return;
+		}
+
+		// Resume the LogReader that we paused before we went to the preference
+		// screen
 		if (!isPaused.get())
 			mLogReader.resume();
 
+	}
+
+	private void openLogReader(String regex) {
+		try {
+			mLogReader = new LogcatLogReader(this, mHandler, regex);
+		} catch (IOException e) {
+			final String errorMsg = "Could not read from Logcat";
+			logger.error(errorMsg);
+			e.printStackTrace();
+			Toast.makeText(this, errorMsg, Toast.LENGTH_LONG).show();
+			return;
+		}
 	}
 
 	/**
 	 * Set our list adapter's max lines as specified in the preferences
 	 */
 	private void configureMaxLinesFromPrefs() {
-		mAdapter.setMaxLines(Math.abs(Integer.parseInt(prefs.getString(
+		mAdapter.setMaxLines(Math.abs(Integer.parseInt(mPrefs.getString(
 				"logcat_max_lines", "1000"))));
 	}
 

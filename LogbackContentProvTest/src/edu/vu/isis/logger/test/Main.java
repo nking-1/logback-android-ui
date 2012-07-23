@@ -23,7 +23,7 @@ public class Main extends ListActivity {
 		
 		@Override
 		public void run() {
-			spamLogger.error("My level is: {}\tCurrent time: {}", spamLogger.getLevel().toString(), System.currentTimeMillis());
+			spamLogger.trace("My level is: {}\tCurrent time: {}", spamLogger.getLevel().toString(), System.currentTimeMillis());
 		}
 		
 	};
@@ -54,7 +54,7 @@ public class Main extends ListActivity {
 	public void onStart() {
 		super.onStart();
 		ex = Executors.newSingleThreadScheduledExecutor();
-		ex.scheduleAtFixedRate(SPAM_RUNNABLE, 0, 3, TimeUnit.SECONDS);
+		ex.scheduleAtFixedRate(SPAM_RUNNABLE, 10, 10, TimeUnit.MILLISECONDS);
 	}
 	
 	@Override

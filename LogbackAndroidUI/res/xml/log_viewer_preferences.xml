@@ -2,20 +2,34 @@
 <PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
     android:key="log_viewer_preferences" >
 
-    <EditTextPreference
-        android:defaultValue="1000"
-        android:dialogMessage="Enter a positive integer, or 0 for unlimited lines"
-        android:dialogTitle="Max Logcat lines"
-        android:inputType="numberSigned"
-        android:key="logcat_max_lines"
-        android:summary="Max number of lines displayed by appenders using Logcat"
-        android:title="Logcat appenders" />
-    <EditTextPreference
-        android:defaultValue=""
-        android:dialogMessage="Enter a Java regular expression"
-        android:dialogTitle="Regular expression"
-        android:key="regular_expression"
-        android:summary="Regular expression to match against incoming logs"
-        android:title="Regular expression" />
+    <PreferenceCategory android:title="Logcat" >
+        <EditTextPreference
+            android:defaultValue="1000"
+            android:dialogMessage="Enter a positive integer, or 0 for unlimited lines"
+            android:dialogTitle="Max Logcat lines"
+            android:inputType="numberSigned"
+            android:key="logcat_max_lines"
+            android:summary="Max number of lines displayed in the Logcat viewer"
+            android:title="Max Logcat lines" />
+        <EditTextPreference
+            android:defaultValue=""
+            android:dialogMessage="Enter a Java regular expression"
+            android:dialogTitle="Regular expression"
+            android:key="regular_expression"
+            android:summary="Regular expression to match against incoming logs"
+            android:title="Regular expression" />
+        <CheckBoxPreference
+            android:defaultValue="true"
+            android:key="colored_logcat_logs"
+            android:summary="Color lines in Logcat based on the first letter of each line"
+            android:title="Color Logcat" />
+    </PreferenceCategory>
+    <PreferenceCategory android:title="File" >
+        <CheckBoxPreference
+            android:defaultValue="true"
+            android:key="colored_file_logs"
+            android:summary="Color lines in file logs based on the first letter of each line"
+            android:title="Color file logs" />
+    </PreferenceCategory>
 
 </PreferenceScreen>

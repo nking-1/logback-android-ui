@@ -3,6 +3,7 @@ package edu.vu.isis.logger.ui;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
@@ -75,9 +76,9 @@ public class FileLogViewer extends LogViewerBase {
 		final TextView tv = (TextView) row.findViewById(R.id.log_display_row);
 
 		final float textSize = tv.getTextSize();
-		final int linesOnScreen = (int) (largestDimension / textSize);
-		numEntriesToSave = 2 * linesOnScreen;
-		final int numLines = 2 * (linesOnScreen + numEntriesToSave);
+		final int numLinesOnScreen = (int) (largestDimension / textSize);
+		numEntriesToSave = 2 * numLinesOnScreen;
+		final int numLines = 2 * (numLinesOnScreen + numEntriesToSave);
 
 		String filepath = processIntent();
 		if (filepath == null) {
@@ -89,7 +90,6 @@ public class FileLogViewer extends LogViewerBase {
 		try {
 			super.mLogReader = this.mLogReader = new FileLogReader(this,
 					mHandler, filepath, numLines);
-			mLogReader.start();
 		} catch (FileNotFoundException e) {
 			String errorMsg = "Could not find file: " + filepath;
 			Toast.makeText(this, errorMsg, Toast.LENGTH_LONG).show();
@@ -104,6 +104,8 @@ public class FileLogViewer extends LogViewerBase {
 			return;
 		}
 
+		mLogReader.start();
+		setupColoringFromPrefs("colored_file_logs");
 		mAdapter = new LogElementAdapter(this, R.layout.log_display_row);
 		mListView.setAdapter(mAdapter);
 		mAdapter.addAll(mLogReader.fillDown());
@@ -116,17 +118,6 @@ public class FileLogViewer extends LogViewerBase {
 
 		mListView.setOnScrollListener(new FileOnScrollListener());
 
-	}
-
-	@Override
-	public boolean onPrepareOptionsMenu(Menu menu) {
-		final boolean returnValue = true && super.onPrepareOptionsMenu(menu);
-
-		menu.add(Menu.NONE, JUMP_BOTTOM_MENU, Menu.NONE, "Jump to end of file");
-		menu.add(Menu.NONE, JUMP_TOP_MENU, Menu.NONE,
-				"Jump to beginning of file");
-
-		return returnValue;
 	}
 
 	@Override
@@ -145,10 +136,26 @@ public class FileLogViewer extends LogViewerBase {
 			mAdapter.addAll(mLogReader.fillDown());
 			setScrollToTop();
 			break;
+		case OPEN_PREFS_MENU:
+			mLogReader.pause();
+			Intent intent = new Intent().setClass(this, LogViewerPreferences.class);
+			startActivityForResult(intent, 0);
+			break;
 		default:
 			returnValue = false;
 		}
 		return returnValue || super.onOptionsItemSelected(item);
+	}
+	
+	@Override
+	public void onActivityResult(int requestCode, int resultCode, Intent data) {
+		boolean wasColored = mLogReader.isColored();
+		setupColoringFromPrefs("colored_file_logs");
+		if(wasColored != mLogReader.isColored()) {
+			recolorLogsInAdapter();
+			mListView.invalidateViews();
+		}
+		mLogReader.resume();
 	}
 
 	/**

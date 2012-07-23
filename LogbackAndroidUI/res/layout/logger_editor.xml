@@ -20,20 +20,20 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal">
-	    <view
-	        class="edu.vu.isis.logger.ui.NoDefaultSpinner"
-	        android:id="@+id/level_spinner"
-	        android:layout_width="0dp"
-	        android:layout_height="wrap_content"
-	        android:layout_weight="50"
-	        android:prompt="@string/level_prompt"/>
 	    <Button
 	        android:id="@+id/appender_button"
 	        android:layout_width="0dp"
 	        android:layout_height="wrap_content"
-	        android:text="Configure appenders"
+	        android:text="@string/configure_appenders"
 	        android:onClick="configureAppenders"
 	        android:layout_weight="50" />
+	    <view
+            class="edu.vu.isis.logger.ui.NoDefaultSpinner"
+            android:id="@+id/level_spinner"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="50"
+            android:prompt="@string/level_prompt"/>
 	</LinearLayout> 
     
 </LinearLayout>

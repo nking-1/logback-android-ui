@@ -37,7 +37,7 @@ import android.os.Message;
 public class LogcatLogReader extends LogReader {
 
 	private static final int BUFFER_SIZE = 1024;
-	
+
 	/** number of milliseconds to delay each message update */
 	private static final long SEND_DELAY = 30;
 
@@ -47,6 +47,22 @@ public class LogcatLogReader extends LogReader {
 	private final BufferedReader mReader;
 	private final ArrayList<LogElement> mLogCache = new ArrayList<LogElement>();
 	private Pattern mPattern;
+	private String mRegex;
+
+	/**
+	 * Indicates whether the ReadThread should be reading
+	 */
+	private final AtomicBoolean isReading = new AtomicBoolean(false);
+
+	/**
+	 * Indicates whether it is worth our time to match against a regex on each
+	 * new line in the thread's loop. This will be false if we have an empty
+	 * String regex, which matches everything, making it useless to create a
+	 * Matcher object and try to find a pattern in a line.
+	 */
+	private final AtomicBoolean isRegexUseful = new AtomicBoolean(false);
+
+	private ReadThread myReadThread;
 
 	private final ScheduledExecutorService scheduler = Executors
 			.newSingleThreadScheduledExecutor();
@@ -54,12 +70,22 @@ public class LogcatLogReader extends LogReader {
 	public LogcatLogReader(Context context, Handler handler, String regex)
 			throws IOException {
 
-		this.mContext = context;
-		this.mHandler = handler;
-		setRegex(regex);
+		mContext = context;
+		mHandler = handler;
+		mRegex = regex;
+
+		try {
+			mPattern = Pattern.compile(mRegex);
+		} catch (PatternSyntaxException e) {
+			mRegex = "";
+			mPattern = Pattern.compile(mRegex);
+		} finally {
+			isRegexUseful.set(!mRegex.equals(""));
+		}
+
 		String command = "logcat";
 		final Process logcatProcess = Runtime.getRuntime().exec(command);
-		this.mReader = new BufferedReader(new InputStreamReader(
+		mReader = new BufferedReader(new InputStreamReader(
 				logcatProcess.getInputStream()), BUFFER_SIZE);
 
 	}
@@ -69,7 +95,6 @@ public class LogcatLogReader extends LogReader {
 	 * and the log cache is not empty
 	 */
 	private void sendCacheAndClear() {
-		// checkValidState();
 		// both methods check the state
 		if (!this.mLogCache.isEmpty()) {
 			sendCacheMsg();
@@ -141,21 +166,21 @@ public class LogcatLogReader extends LogReader {
 
 	@Override
 	public synchronized void pause() {
-		super.pause();
 		stopReading();
+		super.pause();
 	}
 
 	@Override
 	public synchronized void resume() {
-		super.resume();
 		resumeReading();
+		super.resume();
 	}
 
 	/**
 	 * Pauses reading from LogCat, but has no effect on whether cache messages
 	 * are sent.
 	 */
-	private void stopReading() {
+	public void stopReading() {
 		this.isReading.set(false);
 	}
 
@@ -163,8 +188,12 @@ public class LogcatLogReader extends LogReader {
 	 * Resumes reading from LogCat, but has no effect on whether cache messages
 	 * are sent.
 	 */
-	private void resumeReading() {
+	public void resumeReading() {
 		this.isReading.set(true);
+	}
+	
+	public void forceUpdate() {
+		sendCacheAndClear();
 	}
 
 	/**
@@ -177,18 +206,9 @@ public class LogcatLogReader extends LogReader {
 		}
 	}
 
-	public void setRegex(String newRegex) {
-		try {
-			mPattern = Pattern.compile(newRegex);
-		} catch (PatternSyntaxException pe) {
-			mPattern = Pattern.compile("");
-			mHandler.sendEmptyMessage(NOTIFY_INVALID_REGEX_MSG);
-		}
+	public String getRegex() {
+		return mRegex;
 	}
-
-	private final AtomicBoolean isReading = new AtomicBoolean(false);
-
-	private ReadThread myReadThread;
 
 	private class ReadThread extends Thread {
 
@@ -199,10 +219,12 @@ public class LogcatLogReader extends LogReader {
 				if (isReading.get()) {
 					try {
 						String nextLine = mReader.readLine();
-						Matcher matcher = mPattern.matcher(nextLine);
-						if (!matcher.find())
-							continue;
-						final LogLevel level = getCorrespondingLevel(nextLine);
+						if (isRegexUseful.get()) {
+							Matcher matcher = mPattern.matcher(nextLine);
+							if (!matcher.find())
+								continue;
+						}
+						LogLevel level = getCorrespondingLevelIfIsColored(nextLine);
 						synchronized (mLogCache) {
 							mLogCache.add(new LogElement(level, nextLine));
 						}
