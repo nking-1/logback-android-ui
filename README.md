@@ -1,7 +1,10 @@
-logback-android-application
-===========================
+logback-android-application user interface (LAUI)
+==========================================
 
-The logback-android project provides an excellent logging framework but it provides not operator viewing or configuration.  This project fills that gap.
+The logback-android project provides an excellent logging framework.
+However, it lacks a means for the operator to view or configure the logging behavior..  
+This project fills that gap adding a user inteface to logback-android.
+The name of this project is .LAUI (pronounced like Maui).
 
 This project provides a stand alone application for viewing logs managed by logback-android.
 It expects a set of android applications with logback enabled and a content provider wrapping their specific configurations.
@@ -11,9 +14,20 @@ All interaction with logback is through the content provider, thus there is very
 Quick Start
 ===========
 
-git clone
+Clone this repository.
 
 This project is built with maven.
 
 mvn clean install
 
+And to install on all adb connected phones...
+
+cd laui
+
+mvn android:deploy
+ 
+This provides a means for looking at the android logcat log.
+If an android application has been outfitted with Laui the
+applications loggers can be configured dynamically.
+
+ 
