@@ -59,10 +59,10 @@ import android.widget.Toast;
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
 import edu.vu.isis.logger.R;
-import edu.vu.isis.logger.provider.CpConstants;
+import edu.vu.isis.logger.lib.LauiContentProvider;
+import edu.vu.isis.logger.lib.Loggers;
+import edu.vu.isis.logger.lib.Tree;
 import edu.vu.isis.logger.provider.LauiContentUri;
-import edu.vu.isis.logger.util.Loggers;
-import edu.vu.isis.logger.util.Tree;
 import edu.vu.isis.logger.util.TreeAdapter;
 
 /**
@@ -212,9 +212,9 @@ public class LoggerEditor extends ListActivity {
 
 		if (cursor != null && cursor.getCount() >= 1) {
 			final int nameIndex = cursor
-					.getColumnIndex(CpConstants.AppenderTable.NAME);
+					.getColumnIndex(LauiContentProvider.AppenderTable.NAME);
 			final int filepathIndex = cursor
-					.getColumnIndex(CpConstants.AppenderTable.FILE_PATH_STRING);
+					.getColumnIndex(LauiContentProvider.AppenderTable.FILE_PATH_STRING);
 			while (cursor.moveToNext()) {
 				String name = cursor.getString(nameIndex);
 				AppenderHolder appender = new AppenderHolder(name);
@@ -233,13 +233,13 @@ public class LoggerEditor extends ListActivity {
 
 		if (cursor != null && cursor.getCount() >= 1) {
 			final int nameIndex = cursor
-					.getColumnIndexOrThrow(CpConstants.LoggerTable.NAME);
+					.getColumnIndexOrThrow(LauiContentProvider.LoggerTable.NAME);
 			final int levelIndex = cursor
-					.getColumnIndexOrThrow(CpConstants.LoggerTable.LEVEL_INT);
+					.getColumnIndexOrThrow(LauiContentProvider.LoggerTable.LEVEL_INT);
 			final int additivityIndex = cursor
-					.getColumnIndexOrThrow(CpConstants.LoggerTable.ADDITIVITY);
+					.getColumnIndexOrThrow(LauiContentProvider.LoggerTable.ADDITIVITY);
 			final int appenderIndex = cursor
-					.getColumnIndexOrThrow(CpConstants.LoggerTable.ATTACHED_APPENDER_NAMES);
+					.getColumnIndexOrThrow(LauiContentProvider.LoggerTable.ATTACHED_APPENDER_NAMES);
 			while (cursor.moveToNext()) {
 				final String loggerName = cursor.getString(nameIndex);
 				final int levelInt = cursor.getInt(levelIndex);
@@ -562,8 +562,6 @@ public class LoggerEditor extends ListActivity {
 			personalLogger.info("Directory {} was not created for save",
 					dirFile.getAbsolutePath());
 		}
-
-		// TODO: Make sure this is okay according to Android IO conventions
 		OutputStream fos = null;
 		try {
 			fos = new FileOutputStream(file);
@@ -659,7 +657,7 @@ public class LoggerEditor extends ListActivity {
 				appenderSet.add(appender);
 			}
 
-			logger.levelInt = levelStr.equals("null") ? CpConstants.NO_LEVEL : Level.valueOf(levelStr).toInteger();
+			logger.levelInt = levelStr.equals("null") ? LauiContentProvider.NO_LEVEL : Level.valueOf(levelStr).toInteger();
 			logger.additivity = Boolean.valueOf(additivityStr);
 			logger.appenders = appenderSet;
 		}
@@ -675,7 +673,7 @@ public class LoggerEditor extends ListActivity {
 				serializer.startTag("", "logger");
 				serializer.attribute("", NAME_ATT, logger.name);
 				serializer.attribute("", LEVEL_ATT,
-						(logger.levelInt != CpConstants.NO_LEVEL) ? Level
+						(logger.levelInt != LauiContentProvider.NO_LEVEL) ? Level
 								.toLevel(logger.levelInt).toString() : "null");
 				serializer.attribute("", APPENDER_ATT,
 						makeAppenderStr(logger.appenders));
@@ -758,7 +756,7 @@ public class LoggerEditor extends ListActivity {
 	private void updateIcon(Level lvl, View row) {
 		final ImageView iv = (ImageView) (row.findViewById(R.id.logger_icon));
 
-		if (selectedLogger.levelInt == CpConstants.NO_LEVEL) {
+		if (selectedLogger.levelInt == LauiContentProvider.NO_LEVEL) {
 			setEffectiveIcon(lvl, iv);
 		} else {
 			setActualIcon(lvl, iv);
@@ -871,7 +869,7 @@ public class LoggerEditor extends ListActivity {
 
 			holder.tv.setText(txtBldr.toString());
 
-			if (logger.levelInt == CpConstants.NO_LEVEL) {
+			if (logger.levelInt == LauiContentProvider.NO_LEVEL) {
 				holder.tv.setTextAppearance(parent,
 						R.style.unselected_logger_font);
 				parent.setEffectiveIcon(getEffectiveLevel(logger),
@@ -1014,7 +1012,7 @@ public class LoggerEditor extends ListActivity {
 				Uri updateUri = ContentUris.withAppendedId(
 						mLauiContentUri.getLoggerTableContentUri(), 0);
 				ContentValues values = new ContentValues();
-				values.put(CpConstants.APPENDER_KEY, sb.toString());
+				values.put(LauiContentProvider.APPENDER_KEY, sb.toString());
 				parent.getContentResolver().update(updateUri, values,
 						selectedLogger.name, null);
 
@@ -1096,7 +1094,7 @@ public class LoggerEditor extends ListActivity {
 							Toast.LENGTH_LONG).show();
 					return;
 				}
-				nextLevelInt = CpConstants.NO_LEVEL;
+				nextLevelInt = LauiContentProvider.NO_LEVEL;
 			}
 
 			parent.selectedLogger.levelInt = nextLevelInt;
@@ -1104,7 +1102,7 @@ public class LoggerEditor extends ListActivity {
 			Uri updateUri = ContentUris.withAppendedId(
 					mLauiContentUri.getLoggerTableContentUri(), 0);
 			ContentValues levelValues = new ContentValues();
-			levelValues.put(CpConstants.LEVEL_KEY, nextLevelInt);
+			levelValues.put(LauiContentProvider.LEVEL_KEY, nextLevelInt);
 
 			final int numUpdates = getContentResolver().update(updateUri,
 					levelValues, parent.selectedLogger.name, null);
@@ -1122,7 +1120,7 @@ public class LoggerEditor extends ListActivity {
 			// We want to use the effective level for the icon if the
 			// Logger's level is null
 			updateIcon(
-					(nextLevelInt == CpConstants.NO_LEVEL) ? getEffectiveLevel(parent.selectedLogger)
+					(nextLevelInt == LauiContentProvider.NO_LEVEL) ? getEffectiveLevel(parent.selectedLogger)
 							: Level.toLevel(nextLevelInt, Level.DEBUG),
 					parent.selectedView);
 
@@ -1145,7 +1143,7 @@ public class LoggerEditor extends ListActivity {
 	 */
 	static class LoggerHolder {
 
-		int levelInt = CpConstants.NO_LEVEL;
+		int levelInt = LauiContentProvider.NO_LEVEL;
 		boolean additivity = true;
 		String name;
 		Set<AppenderHolder> appenders = new HashSet<AppenderHolder>();
@@ -1181,7 +1179,7 @@ public class LoggerEditor extends ListActivity {
 					+ name
 					+ "\""
 					+ " Level: "
-					+ ((levelInt == CpConstants.NO_LEVEL) ? "none" : Level
+					+ ((levelInt == LauiContentProvider.NO_LEVEL) ? "none" : Level
 							.toLevel(levelInt, Level.ALL));
 		}
 
@@ -1226,7 +1224,7 @@ public class LoggerEditor extends ListActivity {
 	}
 
 	private Level getEffectiveLevel(LoggerHolder logger) {
-		if (logger.levelInt != CpConstants.NO_LEVEL) {
+		if (logger.levelInt != LauiContentProvider.NO_LEVEL) {
 			return Level.toLevel(logger.levelInt);
 		}
 

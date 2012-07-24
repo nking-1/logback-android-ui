@@ -8,18 +8,20 @@ import android.os.Handler;
 public class LogReader {
 	
 	/** the handler to which Messages are sent */
-	protected Handler mHandler;
+	Handler mHandler;
 	
 	/** the Context which is using this LogReader */
-	protected Context mContext;
+	Context mContext;
 	
 	/** Whether this LogReader has been paused or resumed */
-	protected AtomicBoolean isPaused = new AtomicBoolean(true);
+	final AtomicBoolean isPaused = new AtomicBoolean(true);
+	final AtomicBoolean hasBeenStarted = new AtomicBoolean(false);
+	final AtomicBoolean hasBeenTerminated = new AtomicBoolean(false);
 	
-	protected AtomicBoolean hasBeenStarted = new AtomicBoolean(false);
-	
-	protected AtomicBoolean hasBeenTerminated = new AtomicBoolean(false);
-	
+	/**
+	 * Indicates whether the logs should be colored
+	 */
+	final AtomicBoolean isColored = new AtomicBoolean(false);
 	
 	/**
 	 * Tells this LogReader to start itself
@@ -45,7 +47,7 @@ public class LogReader {
 	 * Checks whether this LogReader has been started and has not
 	 * been terminated and throws exceptions if these conditions are not true.
 	 */
-	protected synchronized void checkValidState() {
+	synchronized void checkValidState() {
 		if(!this.hasBeenStarted.get()) {
 			throw new IllegalStateException("This LogReader has not been started");
 		}
@@ -84,6 +86,13 @@ public class LogReader {
 		this.mHandler = handler;
 	}
 	
+	public boolean isColored() {
+		return isColored.get();
+	}
+	
+	public void setColored(boolean colored) {
+		isColored.set(colored);
+	}
 	
 	/**
 	 * Parses a String to get LogLevel that corresponds to that String.
@@ -127,6 +136,21 @@ public class LogReader {
 		case 'F':
 			return LogLevel.Fail;
 		default:
+			return LogLevel.None;
+		}
+	}
+	
+	/**
+	 * Convenience method to get a LogLevel for a String only if
+	 * we have been set to color logs
+	 * @param str -- the String to parse
+	 * @return the corresponding LogLevel for str if isColored is true.
+	 * If isColored is false, LogLevel.None will be returned.
+	 */
+	LogLevel getCorrespondingLevelIfIsColored(String str) {
+		if(isColored.get()) {
+			return getCorrespondingLevel(str);
+		} else {
 			return LogLevel.None;
 		}
 	}

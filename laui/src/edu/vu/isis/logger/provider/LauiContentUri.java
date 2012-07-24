@@ -1,8 +1,11 @@
 package edu.vu.isis.logger.provider;
 
 import android.net.Uri;
+import edu.vu.isis.logger.lib.LauiContentProvider.AppenderTable;
+import edu.vu.isis.logger.lib.LauiContentProvider.LoggerTable;
 
-public class LauiContentUri implements CpConstants {
+
+public class LauiContentUri {
 
 	private Uri mLoggerTableContentUri;
 	private Uri mAppenderTableContentUri;

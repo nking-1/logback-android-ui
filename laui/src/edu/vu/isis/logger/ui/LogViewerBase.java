@@ -6,12 +6,16 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import android.app.ListActivity;
+import android.content.SharedPreferences;
 import android.os.Bundle;
+import android.preference.PreferenceManager;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.ListView;
 import edu.vu.isis.logger.R;
+import edu.vu.isis.logger.util.LogElement;
 import edu.vu.isis.logger.util.LogElementAdapter;
+import edu.vu.isis.logger.util.LogLevel;
 import edu.vu.isis.logger.util.LogReader;
 
 /**
@@ -29,21 +33,25 @@ import edu.vu.isis.logger.util.LogReader;
  */
 public class LogViewerBase extends ListActivity {
 
-	protected LogElementAdapter mAdapter;
-	protected ListView mListView;
-	protected final AtomicBoolean isPaused = new AtomicBoolean(false);
-	protected boolean isConfigChanging = false;
+	LogElementAdapter mAdapter;
+	ListView mListView;
+	final AtomicBoolean isPaused = new AtomicBoolean(false);
+	boolean isConfigChanging = false;
+
+	SharedPreferences mPrefs;
 
 	/* Menu constants */
-	protected static final int TOGGLE_MENU = Menu.NONE + 0;
+	static final int TOGGLE_MENU = Menu.NONE + 0;
+	static final int JUMP_TOP_MENU = Menu.NONE + 1;
+	static final int JUMP_BOTTOM_MENU = Menu.NONE + 2;
+	static final int OPEN_PREFS_MENU = Menu.NONE + 3;
 
 	/* Configuration instance array constants */
-	protected static final int LOG_READER_INDEX = 0;
-	protected static final int ADAPTER_INDEX = 1;
+	static final int LOG_READER_INDEX = 0;
+	static final int ADAPTER_INDEX = 1;
 
-	protected final Logger logger = LoggerFactory
-			.getLogger("ui.logger.logviewer");
-	protected LogReader mLogReader;
+	static final Logger logger = LoggerFactory.getLogger("ui.logger.logviewer");
+	LogReader mLogReader;
 
 	public static final String EXTRA_NAME = "source";
 
@@ -51,6 +59,7 @@ public class LogViewerBase extends ListActivity {
 	public void onCreate(Bundle savedInstanceState) {
 
 		super.onCreate(savedInstanceState);
+		mPrefs = PreferenceManager.getDefaultSharedPreferences(this);
 		setContentView(R.layout.log_viewer);
 		mListView = getListView();
 
@@ -116,6 +125,28 @@ public class LogViewerBase extends ListActivity {
 		this.mAdapter.clear();
 	}
 
+	void setupColoringFromPrefs(String key) {
+		mLogReader.setColored(mPrefs.getBoolean(key, true));
+	}
+
+	void recolorLogsInAdapter() {
+		mLogReader.pause();
+		if (mLogReader.isColored()) {
+			for (int i = 0; i < mAdapter.getCount(); i++) {
+				LogElement element = mAdapter.getItem(i);
+				element.setLogLevel(LogReader.getCorrespondingLevel(element.getMessage()));
+			}
+		} else {
+			for (int i = 0; i < mAdapter.getCount(); i++) {
+				LogElement element = mAdapter.getItem(i);
+				element.setLogLevel(LogLevel.None);
+			}
+		}
+		if(!isPaused.get()) {
+			mLogReader.resume();
+		}
+	}
+
 	private boolean isLogReaderNull() {
 		if (this.mLogReader == null) {
 			warnNullReader();
@@ -128,7 +159,7 @@ public class LogViewerBase extends ListActivity {
 	 * Convenience method for reporting that our log reader is null
 	 */
 	private void warnNullReader() {
-		this.logger.warn("Log reader was never initialized!");
+		logger.warn("Log reader was never initialized!");
 	}
 
 	@Override
@@ -138,6 +169,9 @@ public class LogViewerBase extends ListActivity {
 
 		menu.add(Menu.NONE, TOGGLE_MENU, Menu.NONE,
 				(this.isPaused.get() ? "Play" : "Pause"));
+		menu.add(Menu.NONE, JUMP_BOTTOM_MENU, Menu.NONE, "Go to bottom");
+		menu.add(Menu.NONE, JUMP_TOP_MENU, Menu.NONE, "Go to top");
+		menu.add(Menu.NONE, OPEN_PREFS_MENU, Menu.NONE, "Open preferences");
 
 		return super.onPrepareOptionsMenu(menu);
 

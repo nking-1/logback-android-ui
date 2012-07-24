@@ -5,5 +5,6 @@
     <string name="log_viewer_dialog_desc">Logs can be viewed from Logcat, or you can select an Appender that is writing to a file to read its logs.</string>
     <string name="view_logcat">View Logcat</string>
     <string name="refresh_list">Refresh list</string>
+    <string name="configure_appenders">Configure appenders</string>
 
 </resources>

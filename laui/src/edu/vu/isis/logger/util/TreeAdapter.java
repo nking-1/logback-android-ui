@@ -2,7 +2,6 @@ package edu.vu.isis.logger.util;
 
 import java.util.ArrayList;
 
-
 import android.content.Context;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -10,6 +9,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.BaseAdapter;
 import android.widget.TextView;
+import edu.vu.isis.logger.lib.Tree;
 
 public class TreeAdapter<T> extends BaseAdapter {
 
