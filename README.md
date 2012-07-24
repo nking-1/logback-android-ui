@@ -12,7 +12,7 @@ The application provides both configuration of loggers and viewing of the logs.
 All interaction with logback is through the content provider, thus there is very little (hopefully none) calls to logback present in this application.
 
 Quick Start
-===========
+
 
 Clone this repository.
 
