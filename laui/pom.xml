@@ -1,0 +1,143 @@
+<?xml version="1.0" encoding="utf-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+
+  <modelVersion>4.0.0</modelVersion>
+
+  <properties>
+    <laui.type>provider</laui.type>
+  </properties>
+
+  <parent>
+    <groupId>edu.vu.isis</groupId>
+    <artifactId>laui-parent</artifactId>
+    <version><!--@VERSION-->1.0.0-SNAPSHOT<!--VERSION@--></version>
+  </parent>
+
+  <artifactId>laui</artifactId>
+  <packaging>apk</packaging>
+  <name>laui</name>
+
+  <repositories>
+    <repository>
+      <releases>
+        <enabled>true</enabled>
+        <updatePolicy>never</updatePolicy>
+        <checksumPolicy>fail</checksumPolicy>
+      </releases>
+      <snapshots>
+        <enabled>false</enabled>
+        <updatePolicy>always</updatePolicy>
+        <checksumPolicy>warn</checksumPolicy>
+      </snapshots>
+      <id>nexus-vanderbilt</id>
+      <url>${vandy.release.url}</url>
+      <name>laui release</name>
+      <layout>default</layout>
+    </repository>
+
+    <repository>
+      <releases>
+        <enabled>false</enabled>
+        <updatePolicy>always</updatePolicy>
+        <checksumPolicy>warn</checksumPolicy>
+      </releases>
+      <snapshots>
+        <enabled>true</enabled>
+        <updatePolicy>never</updatePolicy>
+        <checksumPolicy>fail</checksumPolicy>
+      </snapshots>
+      <id>nexus-snapshot</id>
+      <url>${vandy.snapshot.url}</url>
+      <name>laui snapshot</name>
+      <layout>default</layout>
+    </repository>
+  </repositories>
+
+  <dependencies>
+    <dependency>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>lauilib</artifactId>
+      <version>${project.version}</version>
+      <type>jar</type>
+      <scope>compile</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>ch.qos.logback</groupId>
+      <artifactId>logback</artifactId>
+      <scope>compile</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-api</artifactId>
+      <scope>compile</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>com.google.android</groupId>
+      <artifactId>android</artifactId>
+      <scope>provided</scope>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <sourceDirectory>src</sourceDirectory>
+    <finalName>laui</finalName>
+     
+    <plugins>
+      <!-- Bug in release plugin prevents other plugin configurations from carrying 
+                                through to child from parent, and forked maven process to create release 
+                                POM will not use source 1.5 unless specified here. Lame... -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+      </plugin>
+
+      <plugin>
+        <groupId>com.jayway.maven.plugins.android.generation2</groupId>
+        <artifactId>android-maven-plugin</artifactId>
+        <configuration>
+          <sdk>
+            <platform>8</platform>
+          </sdk>
+          <emulator>
+            <avd>22</avd>
+          </emulator>
+          <deleteConflictingFiles>true</deleteConflictingFiles>
+          <undeployBeforeDeploy>true</undeployBeforeDeploy>
+          <!-- attachJar false required because deploying both jar and apk to 
+               Nexus appears to make APK inaccessible vai search -->
+          <attachJar>false</attachJar>
+          <jvmArguments>
+            <argument>-Xms1500m</argument>
+            <argument>-Xmx1500m</argument>
+          </jvmArguments>
+        </configuration>
+        <extensions>true</extensions>
+      </plugin>
+       
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>properties-maven-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>intialize-properties</id>
+            <phase>initialize</phase>
+            <goals>
+              <goal>read-project-properties</goal>
+            </goals>
+            <configuration>
+              <files>
+                <file>ant.properties</file>
+              </files>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      
+    </plugins>
+  </build>
+</project>

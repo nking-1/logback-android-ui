@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+
+  <modelVersion>4.0.0</modelVersion>
+  <properties>
+    <laui.type>schema</laui.type>
+  </properties>
+  <parent>
+    <groupId>edu.vu.isis</groupId>
+    <artifactId>laui-parent</artifactId>
+    <version><!--@VERSION-->1.0.0-SNAPSHOT<!--VERSION@--></version>
+  </parent>
+
+  <artifactId>lauilib</artifactId>
+  <packaging>jar</packaging>
+  <name>lauilib</name>
+
+  <dependencies>
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-api</artifactId>
+      <scope>compile</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>com.google.android</groupId>
+      <artifactId>android</artifactId>
+      <scope>provided</scope>
+    </dependency>
+
+  </dependencies>
+
+  <build>
+    <finalName>${project.artifactId}</finalName>
+    <resources>
+      <resource>
+        <directory>${basedir}/src/test/resources</directory>
+        <filtering>true</filtering>
+        <targetPath>${basedir}/target/test-classes</targetPath>
+      </resource>
+      <resource>
+        <directory>${basedir}/src/main/resources</directory>
+        <filtering>true</filtering>
+        <targetPath>${basedir}/target/classes</targetPath>
+      </resource>
+    </resources>
+
+    <plugins>
+    </plugins>
+  </build>
+</project>
