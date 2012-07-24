@@ -767,46 +767,46 @@ public class LoggerEditor extends ListActivity {
 	private void setEffectiveIcon(Level lvl, ImageView iv) {
 		switch (lvl.levelInt) {
 		case Level.TRACE_INT:
-			iv.setImageResource(R.drawable.effective_trace_level_icon);
+			iv.setImageResource(R.drawable.ic_effective_logger_trace);
 			break;
 		case Level.DEBUG_INT:
-			iv.setImageResource(R.drawable.effective_debug_level_icon);
+			iv.setImageResource(R.drawable.ic_effective_logger_debug);
 			break;
 		case Level.INFO_INT:
-			iv.setImageResource(R.drawable.effective_info_level_icon);
+			iv.setImageResource(R.drawable.ic_effective_logger_info);
 			break;
 		case Level.WARN_INT:
-			iv.setImageResource(R.drawable.effective_warn_level_icon);
+			iv.setImageResource(R.drawable.ic_effective_logger_warn);
 			break;
 		case Level.ERROR_INT:
-			iv.setImageResource(R.drawable.effective_error_level_icon);
+			iv.setImageResource(R.drawable.ic_effective_logger_error);
 			break;
 		case Level.OFF_INT:
 		default:
-			iv.setImageResource(R.drawable.effective_off_level_icon);
+			iv.setImageResource(R.drawable.ic_effective_logger_off);
 		}
 	}
 
 	private void setActualIcon(Level lvl, ImageView iv) {
 		switch (lvl.levelInt) {
 		case Level.TRACE_INT:
-			iv.setImageResource(R.drawable.actual_trace_level_icon);
+			iv.setImageResource(R.drawable.ic_actual_logger_trace);
 			break;
 		case Level.DEBUG_INT:
-			iv.setImageResource(R.drawable.actual_debug_level_icon);
+			iv.setImageResource(R.drawable.ic_actual_logger_debug);
 			break;
 		case Level.INFO_INT:
-			iv.setImageResource(R.drawable.actual_info_level_icon);
+			iv.setImageResource(R.drawable.ic_actual_logger_info);
 			break;
 		case Level.WARN_INT:
-			iv.setImageResource(R.drawable.actual_warn_level_icon);
+			iv.setImageResource(R.drawable.ic_actual_logger_warn);
 			break;
 		case Level.ERROR_INT:
-			iv.setImageResource(R.drawable.actual_error_level_icon);
+			iv.setImageResource(R.drawable.ic_actual_logger_error);
 			break;
 		case Level.OFF_INT:
 		default:
-			iv.setImageResource(R.drawable.actual_off_level_icon);
+			iv.setImageResource(R.drawable.ic_actual_logger_off);
 		}
 	}
 
@@ -882,10 +882,10 @@ public class LoggerEditor extends ListActivity {
 
 			if (logger == rootLogger) {
 				holder.appenderIV
-						.setImageResource(R.drawable.appender_attached_icon);
+						.setImageResource(R.drawable.ic_appender_attached);
 			} else if (!logger.isAdditive()) {
 				holder.appenderIV
-						.setImageResource(R.drawable.appender_attached_icon);
+						.setImageResource(R.drawable.ic_appender_attached);
 			} else {
 				holder.appenderIV.setImageBitmap(null);
 			}

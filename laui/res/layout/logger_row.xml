@@ -6,22 +6,24 @@
     
     <ImageView
         android:id="@+id/logger_icon"
-        android:layout_width="40dp"
-        android:layout_height="40dp"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
         android:contentDescription="@string/logger_icon_desc"
         />
     
     <TextView
         android:id="@+id/logger_text"
         android:layout_width="0dp"
-        android:layout_height="40dp"
+        android:layout_height="wrap_content"
         android:layout_weight="1"
         android:gravity="center_vertical"
+        android:layout_marginLeft="5dp"
+        android:layout_marginRight="5dp"
         />
         
     <ImageView
     	android:id="@+id/appender_icon"
-    	android:layout_width="40dp"
-    	android:layout_height="40dp"/>
+    	android:layout_width="wrap_content"
+    	android:layout_height="wrap_content"/>
     
 </LinearLayout>
