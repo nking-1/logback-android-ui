@@ -6,5 +6,6 @@
     <string name="view_logcat">View Logcat</string>
     <string name="refresh_list">Refresh list</string>
     <string name="configure_appenders">Configure appenders</string>
+    <string name="appender_icon">Appender icon</string>
 
 </resources>

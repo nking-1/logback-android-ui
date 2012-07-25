@@ -2,12 +2,16 @@ package edu.vu.isis.logger.ui;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import android.content.Intent;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
 import android.view.MenuItem;
+import android.view.MotionEvent;
+import android.view.View;
+import android.view.View.OnTouchListener;
 import android.widget.Toast;
 import edu.vu.isis.logger.util.LogElement;
 import edu.vu.isis.logger.util.LogcatLogReader;
@@ -17,10 +21,20 @@ import edu.vu.isis.logger.util.LogcatLogReader;
  * reading from Logcat is handled by a LogcatLogReader. This class's
  * responsibility is only to connect the LogcatLogReader to the UI.
  * 
- * @author nick
+ * @author Nick King
  * 
  */
 public class LogcatLogViewer extends LogViewerBase {
+
+	/**
+	 * Temporary patch for a bug caused by ListView's transcript mode not quite
+	 * working correctly in pre-ICS Android. Without this AtomicBoolean, the
+	 * autojump behavior won't work correctly when the user initially opens the
+	 * Logcat viewer because so many items are added to the adapter in bulk at
+	 * once. There is still a bug with the autojump when lots of items are added
+	 * in bulk.
+	 */
+	private AtomicBoolean alwaysJump = new AtomicBoolean(true);
 
 	public Handler mHandler = new Handler() {
 
@@ -28,14 +42,16 @@ public class LogcatLogViewer extends LogViewerBase {
 
 		@Override
 		public void handleMessage(Message msg) {
-
 			switch (msg.what) {
 			case LogcatLogReader.CONCAT_DATA_MSG:
 				if (msg.obj != null) {
 					@SuppressWarnings("unchecked")
 					final List<LogElement> elemList = (List<LogElement>) msg.obj;
-					final boolean jumpDown = (mListView
-							.getLastVisiblePosition() == mAdapter.getCount() - 1);
+					final int lastVisiblePos = mListView
+							.getLastVisiblePosition();
+					final int adapterCount = mAdapter.getCount();
+					final boolean jumpDown = (lastVisiblePos == adapterCount - 1)
+							|| alwaysJump.get();
 					mAdapter.addAll(elemList);
 					if (jumpDown)
 						mListView.setSelection(mAdapter.getCount() - 1);
@@ -58,6 +74,16 @@ public class LogcatLogViewer extends LogViewerBase {
 	public void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 
+		mListView.setOnTouchListener(new OnTouchListener() {
+
+			@Override
+			public boolean onTouch(View v, MotionEvent event) {
+				alwaysJump.set(false);
+				return false;
+			}
+
+		});
+
 		String regex = mPrefs.getString("regular_expression", "");
 
 		openLogReader(regex);
@@ -75,6 +101,7 @@ public class LogcatLogViewer extends LogViewerBase {
 			break;
 		case JUMP_TOP_MENU:
 			setScrollToTop();
+			alwaysJump.set(false);
 			break;
 		case OPEN_PREFS_MENU:
 			// Pause reading until we're done resetting the preferences
@@ -110,7 +137,7 @@ public class LogcatLogViewer extends LogViewerBase {
 		setupColoringFromPrefs("colored_logcat_logs");
 
 		if (wasColored != mLogReader.isColored()) {
-			((LogcatLogReader)mLogReader).forceUpdate();
+			((LogcatLogReader) mLogReader).forceUpdate();
 			recolorLogsInAdapter();
 			mListView.invalidateViews();
 		}

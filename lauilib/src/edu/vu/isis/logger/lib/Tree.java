@@ -21,12 +21,10 @@ import java.util.Collection;
 import java.util.HashMap;
 
 /**
- * Objects of this class are tree nodes.
- * A tree node contains a list of leaves which may be empty.
- * A tree node has a payload, which is a reference to an object.
- * All nodes in a tree share the same dictionary (locate).
- * The parent of a tree node is the tree which contains this node
- * as a leaf.
+ * Objects of this class are tree nodes. A tree node contains a list of leaves
+ * which may be empty. A tree node has a payload, which is a reference to an
+ * object. All nodes in a tree share the same dictionary (locate). The parent of
+ * a tree node is the tree which contains this node as a leaf.
  * 
  * @param <T>
  *            Object's type in the tree.
@@ -38,7 +36,6 @@ public class Tree<T> {
 	final private Tree<T> parent;
 	final private HashMap<T, Tree<T>> locate;
 
-	
 	private Tree(T payload, HashMap<T, Tree<T>> locate, Tree<T> parent) {
 		this.payload = payload;
 		this.locate = locate;
@@ -46,7 +43,7 @@ public class Tree<T> {
 		this.leafs = new ArrayList<Tree<T>>();
 		locate.put(payload, this);
 	}
-	
+
 	/**
 	 * Construct the root tree node.
 	 * 
@@ -57,8 +54,8 @@ public class Tree<T> {
 	}
 
 	/**
-	 * Adds a leaf node for a particular payload to a 
-	 * node having the specified parent payload.
+	 * Adds a leaf node for a particular payload to a node having the specified
+	 * parent payload.
 	 * 
 	 * @param root
 	 * @param leaf
@@ -67,7 +64,8 @@ public class Tree<T> {
 		if (locate.containsKey(root)) {
 			locate.get(root).addLeaf(leaf);
 		} else {
-			throw new IllegalArgumentException("no parent with that name "+root.toString());
+			throw new IllegalArgumentException("no parent with that name "
+					+ root.toString());
 		}
 	}
 
@@ -83,7 +81,7 @@ public class Tree<T> {
 		locate.put(leaf, t);
 		return t;
 	}
-	
+
 	public boolean contains(T element) {
 		return locate.containsKey(element);
 	}

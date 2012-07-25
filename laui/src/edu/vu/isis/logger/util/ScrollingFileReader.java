@@ -7,6 +7,23 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel.MapMode;
 
+/**
+ * A file reader capable of reading forward and backward through a file as
+ * needed. Two markers are kept at a fixed distance between each other. This
+ * distance, known as the spreadLimit, is the maximum number of lines allowed
+ * between the two markers before they are both shifted in the appropriate
+ * direction upon the next line read.
+ * <p/>
+ * The goal of this file reader is to allow a program to read a file without
+ * storing all of the previously read lines in memory. This allows for a very
+ * low memory footprint when reading very large files.
+ * <p/>
+ * Note that a ScrollingFileReader is not a subclass of Reader from the Java IO
+ * libraries.
+ * 
+ * @author Nick King
+ * 
+ */
 public class ScrollingFileReader {
 
 	private static final int NUM_LINES_NOT_COUNTED = -1;
@@ -268,10 +285,10 @@ public class ScrollingFileReader {
 		}
 
 	}
-	
+
 	/**
 	 * Sets the top and bottom markers to both be at the beginning of the file.
-	 * The effective spread is therefore 0 after this method is called.  It is
+	 * The effective spread is therefore 0 after this method is called. It is
 	 * recommended to call leapForward() or stepForward() after calling this
 	 * method to read the beginning lines of the file.
 	 */
@@ -279,10 +296,10 @@ public class ScrollingFileReader {
 		botLinePos = topLinePos = 0;
 		effectiveSpread = 0;
 	}
-	
+
 	/**
-	 * Sets the top and bottom markers to both be at the end of the file.
-	 * The effective spread is therefore 0 after this method is called.  It is
+	 * Sets the top and bottom markers to both be at the end of the file. The
+	 * effective spread is therefore 0 after this method is called. It is
 	 * recommended to call leapBackward() or stepBackward() after calling this
 	 * method to read the last lines of the file.
 	 */
@@ -290,7 +307,6 @@ public class ScrollingFileReader {
 		botLinePos = topLinePos = (int) mFile.length();
 		effectiveSpread = 0;
 	}
-	
 
 	public int getNumLinesInBuffer() {
 		return countLinesInBuffer();
@@ -332,15 +348,13 @@ public class ScrollingFileReader {
 		botLinePos = ByteBuffers.getBufferPosition(mBuffer) + 2;
 
 	}
-	
-	
+
 	private static ByteBuffer openBuffer(File file) throws IOException {
 		final FileInputStream fis = new FileInputStream(file);
-		ByteBuffer buffer = fis.getChannel().map(MapMode.READ_ONLY,
-				0, file.length());
+		ByteBuffer buffer = fis.getChannel().map(MapMode.READ_ONLY, 0,
+				file.length());
 		fis.close();
 		return buffer;
 	}
-
 
 }

@@ -67,7 +67,19 @@ import edu.vu.isis.logger.util.TreeAdapter;
 
 /**
  * This class provides a user interface to edit the Level and Appenders of all
- * Logger objects provided by the ContentProvider.
+ * Logger objects provided by the ContentProvider. The ContentProvider is
+ * queried for all of the Loggers and Appenders once when the Activity is
+ * started. The user can also force another query from a menu selection. Loggers
+ * and Appenders are stored inside of LoggerHolder and AppenderHolder objects.
+ * These allow us to keep track of the levels of the Loggers and Appenders
+ * without querying the ContentProvider excessively. The UI only reflects what
+ * we have stored in our AppenderHolder and LoggerHolder objects, so it is
+ * important to note that if something happens that causes the level of a Logger
+ * to change in the other application, then we will not know and our UI will
+ * show invalid data.
+ * 
+ * This class also has the capability of saving and loading Logger
+ * configurations. This is achieved by reading and writing XML files.
  * 
  * @author Nick King
  * 
@@ -657,7 +669,8 @@ public class LoggerEditor extends ListActivity {
 				appenderSet.add(appender);
 			}
 
-			logger.levelInt = levelStr.equals("null") ? LauiContentProvider.NO_LEVEL : Level.valueOf(levelStr).toInteger();
+			logger.levelInt = levelStr.equals("null") ? LauiContentProvider.NO_LEVEL
+					: Level.valueOf(levelStr).toInteger();
 			logger.additivity = Boolean.valueOf(additivityStr);
 			logger.appenders = appenderSet;
 		}
@@ -672,9 +685,13 @@ public class LoggerEditor extends ListActivity {
 			for (LoggerHolder logger : loggerMap.values()) {
 				serializer.startTag("", "logger");
 				serializer.attribute("", NAME_ATT, logger.name);
-				serializer.attribute("", LEVEL_ATT,
-						(logger.levelInt != LauiContentProvider.NO_LEVEL) ? Level
-								.toLevel(logger.levelInt).toString() : "null");
+				serializer
+						.attribute(
+								"",
+								LEVEL_ATT,
+								(logger.levelInt != LauiContentProvider.NO_LEVEL) ? Level
+										.toLevel(logger.levelInt).toString()
+										: "null");
 				serializer.attribute("", APPENDER_ATT,
 						makeAppenderStr(logger.appenders));
 				serializer.attribute("", ADDITIVITY_ATT,
@@ -949,7 +966,7 @@ public class LoggerEditor extends ListActivity {
 		TextView tv = (TextView) dialog
 				.findViewById(R.id.appender_selector_message);
 		String message = "Configuring appenders for logger "
-				+ selectedLogger.name + "  Close dialog to save changes.";
+				+ selectedLogger.name + "\nClose dialog to save changes.";
 		tv.setText(message);
 
 		final LoggerHolder parentLogger = loggerMap.get(Loggers
@@ -1179,8 +1196,8 @@ public class LoggerEditor extends ListActivity {
 					+ name
 					+ "\""
 					+ " Level: "
-					+ ((levelInt == LauiContentProvider.NO_LEVEL) ? "none" : Level
-							.toLevel(levelInt, Level.ALL));
+					+ ((levelInt == LauiContentProvider.NO_LEVEL) ? "none"
+							: Level.toLevel(levelInt, Level.ALL));
 		}
 
 	}

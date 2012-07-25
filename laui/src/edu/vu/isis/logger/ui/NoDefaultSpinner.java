@@ -16,17 +16,13 @@ import android.widget.TextView;
 
 /**
  * A modified Spinner that doesn't automatically select the first entry in the
- * list.
- * 
- * Shows the prompt if nothing is selected.
- * 
- * Limitations: does not display prompt if the entry list is empty.
- * 
- * <p>
+ * list. Shows the prompt if nothing is selected. Limitations: does not display
+ * prompt if the entry list is empty.
+ * <p/>
  * This class comes from an answer by emmby on StackOverflow:
  * http://stackoverflow .com/questions/867518/how-to-make-an-android-spinner
  * -with-initial-text-select-one
- * <p>
+ * <p/>
  * Go upvote his answer if you like this workaround.
  * 
  * @author emmby, Nick King
@@ -65,7 +61,7 @@ public class NoDefaultSpinner extends Spinner {
 		try {
 			m.invoke(this, -1);
 			n.invoke(this, -1);
-		} catch(Exception e) {
+		} catch (Exception e) {
 			throw new RuntimeException(e);
 		}
 		requestLayout();

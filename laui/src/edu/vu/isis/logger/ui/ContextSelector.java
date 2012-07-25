@@ -18,6 +18,13 @@ import android.widget.ListView;
 import android.widget.TextView;
 import edu.vu.isis.logger.R;
 
+/**
+ * Allows the user to select which application's LoggerContext to view and edit.
+ * Android is queried for applications running LAUI by finding all applications
+ * with Content Providers whose authorities end with "LauiContentProvider"
+ * @author Nick King
+ * 
+ */
 public class ContextSelector extends ListActivity {
 
 	private List<AppHolder> mAppList = new ArrayList<AppHolder>();
@@ -65,7 +72,7 @@ public class ContextSelector extends ListActivity {
 		intent.setClass(this, LogcatLogViewer.class);
 		startActivity(intent);
 	}
-	
+
 	public void refreshList(View v) {
 		findContentProviders();
 	}

@@ -10,12 +10,10 @@ import org.slf4j.LoggerFactory;
 import android.content.ContentProvider;
 import android.content.ContentValues;
 import android.content.UriMatcher;
-import android.content.res.Resources;
 import android.database.Cursor;
 import android.database.MatrixCursor;
 import android.net.Uri;
 import android.provider.BaseColumns;
-import android.util.Log;
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.LoggerContext;
@@ -23,6 +21,18 @@ import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.Appender;
 import ch.qos.logback.core.FileAppender;
 
+/**
+ * This ContentProvider allows LAUI to receive a list of all Appenders and
+ * Loggers in an application. The ContentProvider's update() method also allows
+ * LAUI to configure the levels and appenders attached to a Logger.
+ * <p/>
+ * The Authority of this ContentProvider is generated dynamically at runtime. It
+ * will consist of the application's package name followed by
+ * ".LauiContentProvider"
+ * 
+ * @author Nick King
+ * 
+ */
 public class LauiContentProvider extends ContentProvider {
 
 	public static final String AUTHORITY_SUFFIX = "LauiContentProvider";
@@ -79,7 +89,7 @@ public class LauiContentProvider extends ContentProvider {
 	private static final int SINGLE_APPENDER = 3;
 	private static final int MULTIPLE_APPENDERS = 4;
 
-	// Key contants for updating tables
+	// Key constants for updating tables
 	public static final String LEVEL_KEY = "level";
 	public static final String APPENDER_KEY = "appender";
 
@@ -90,8 +100,11 @@ public class LauiContentProvider extends ContentProvider {
 
 	private static final LoggerContext LOGGER_CONTEXT = (LoggerContext) LoggerFactory
 			.getILoggerFactory();
-
-	private String logTag;
+	private static final Logger personalLogger;
+	static {
+		personalLogger = Loggers.getLoggerByName("LauiCp");
+		personalLogger.setLevel(Level.OFF);
+	}
 
 	@Override
 	public boolean onCreate() {
@@ -117,17 +130,6 @@ public class LauiContentProvider extends ContentProvider {
 				LauiContentProvider.AppenderTable.PATH_MULTIPLE,
 				LauiContentProvider.MULTIPLE_APPENDERS);
 
-		// Since multiple apps might be using this library, we get the
-		// application name so we can tag our logs without being ambiguous.
-		final Resources resources = getContext().getResources();
-		if (resources != null) {
-			CharSequence appName = resources.getText(resources.getIdentifier(
-					"app_name", "string", getContext().getPackageName()));
-			logTag = (appName == null) ? "LauiCp" : appName + "_LauiCp";
-		} else {
-			logTag = "LauiCp";
-		}
-
 		return true;
 	}
 
@@ -139,7 +141,7 @@ public class LauiContentProvider extends ContentProvider {
 		switch (LauiContentProvider.URI_MATCHER.match(uri)) {
 
 		case SINGLE_LOGGER: {
-			Log.i(logTag, "Got a query for a single logger");
+			personalLogger.info("Got a query for a single logger");
 			cursor = new MatrixCursor(
 					LauiContentProvider.LoggerTable.COLUMN_NAMES, 1);
 			final int whichLogger = Integer.parseInt(uri.getPathSegments().get(
@@ -147,9 +149,9 @@ public class LauiContentProvider extends ContentProvider {
 
 			final List<Logger> loggerList = LOGGER_CONTEXT.getLoggerList();
 			if (whichLogger > loggerList.size() - 1) {
-				Log.e(logTag, "Got request for logger #" + whichLogger
-						+ " but there are only " + loggerList.size()
-						+ " loggers.");
+				personalLogger
+						.warn("Got request for logger #{} but there are only {} loggers.",
+								whichLogger, loggerList.size());
 				return null;
 			}
 
@@ -159,7 +161,7 @@ public class LauiContentProvider extends ContentProvider {
 			break;
 
 		case MULTIPLE_LOGGERS: {
-			Log.i(logTag, "Got a query for all loggers");
+			personalLogger.trace("Got a query for all loggers");
 
 			final List<Logger> loggerList = LOGGER_CONTEXT.getLoggerList();
 			cursor = new MatrixCursor(
@@ -172,7 +174,7 @@ public class LauiContentProvider extends ContentProvider {
 			break;
 
 		case SINGLE_APPENDER: {
-			Log.i(logTag, "Got a query for a single appender");
+			personalLogger.trace("Got a query for a single appender");
 			cursor = new MatrixCursor(
 					LauiContentProvider.AppenderTable.COLUMN_NAMES, 1);
 			final int whichAppender = Integer.parseInt(uri.getPathSegments()
@@ -180,9 +182,9 @@ public class LauiContentProvider extends ContentProvider {
 			final List<Appender<ILoggingEvent>> appenderList = getAppenderList();
 
 			if (whichAppender > appenderList.size() - 1) {
-				Log.e(logTag, "Got request for logger #" + whichAppender
-						+ " but there are only " + appenderList.size()
-						+ " loggers.");
+				personalLogger
+						.warn("Got request for appender #{} but there are only {} appenders.",
+								whichAppender, appenderList.size());
 				return null;
 			}
 
@@ -192,7 +194,7 @@ public class LauiContentProvider extends ContentProvider {
 			break;
 
 		case MULTIPLE_APPENDERS: {
-			Log.i(logTag, "Got a query for all appenders");
+			personalLogger.trace("Got a query for all appenders");
 			List<Appender<ILoggingEvent>> appenderList = getAppenderList();
 			cursor = new MatrixCursor(
 					LauiContentProvider.AppenderTable.COLUMN_NAMES,
@@ -204,7 +206,7 @@ public class LauiContentProvider extends ContentProvider {
 			break;
 
 		default:
-			Log.i(logTag, "Could not match Uri for query");
+			personalLogger.warn("Could not match Uri for query");
 			cursor = null;
 
 		}
@@ -223,7 +225,7 @@ public class LauiContentProvider extends ContentProvider {
 
 	private Object[] makeLoggerRow(Logger logger) {
 		String name = logger.getName();
-		Log.v(logTag, "Adding row for logger " + name);
+		personalLogger.trace("Adding row for logger {}", name);
 		Level level = logger.getLevel();
 
 		Integer levelInt = (level == null) ? NO_LEVEL : level.levelInt;
@@ -362,21 +364,19 @@ public class LauiContentProvider extends ContentProvider {
 			return false;
 
 		if (appenderStr.equals("")) {
-			Log.i(logTag,
-					"Got empty appender string, clearing appenders off Logger "
-							+ logger.getName());
+			personalLogger
+					.debug("Got empty appender string, clearing appenders off Logger {}",
+							logger.getName());
 		} else {
 			String[] appenderNames = appenderStr.split(",");
-			Log.v(logTag,
-					"Attaching appenders " + Arrays.toString(appenderNames)
-							+ " to Logger " + logger.getName());
-
+			personalLogger.debug("Attaching appenders {} to Logger {}",
+					Arrays.toString(appenderNames), logger.getName());
 			for (String name : appenderNames) {
 				name = name.trim();
 				Appender<ILoggingEvent> found = findAppender(name, appenderList);
 				if (found == null) {
-					Log.w(logTag, "Appender " + name
-							+ " was not found, skipping");
+					personalLogger.warn("Appender {} was not found, skipping",
+							name);
 					continue;
 				}
 				logger.addAppender(found);
@@ -384,13 +384,11 @@ public class LauiContentProvider extends ContentProvider {
 		}
 
 		if (Loggers.hasSameAppendersAsParent(logger)) {
-			Log.d(logTag, "Setting additivity of Logger " + logger.getName()
-					+ " to true.");
+			personalLogger.debug("Setting additivity of Logger {} to true.", logger.getName());
 			logger.setAdditive(true);
 			Loggers.clearAppenders(logger);
 		} else {
-			Log.d(logTag, "Setting additivity of Logger " + logger.getName()
-					+ " to false.");
+			personalLogger.debug("Setting additivity of Logger {} to false.", logger.getName());
 			logger.setAdditive(false);
 		}
 
@@ -418,7 +416,7 @@ public class LauiContentProvider extends ContentProvider {
 				appenderList.add(a);
 			}
 		} catch (IllegalStateException e) {
-			Log.e("LauiCp", "Unable to get a reference to the AppenderStore");
+			personalLogger.error("Unable to get a reference to the AppenderStore");
 		}
 		return appenderList;
 	}
@@ -466,11 +464,11 @@ public class LauiContentProvider extends ContentProvider {
 			levelName = Level.OFF.toString();
 			break;
 		default:
-			Log.e(logTag, "Unable to match against level of int " + levelInt);
+			personalLogger.warn("Unable to match against level of int {}", levelInt);
 			return false;
 		}
 
-		Log.v(logTag, "Updated " + logger.getName() + " to level " + levelName);
+		personalLogger.debug("Updated {} to level {}", logger.getName(), levelName);
 		return true;
 
 	}
