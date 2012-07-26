@@ -76,7 +76,7 @@ However, Logback does not, by default, keep track of its instantiated appenders 
     
     <newRule pattern="configuration/appender" actionClass="edu.vu.isis.logger.lib.AppenderStoreAction"/>
     
-This will allow LAUI-Lib to keep track of your appenders and make them available to LAUI.  This tag should be added inside of your <configuration> tag.  You can still use LAUI if you do not add this to your configuration file.  Here is an example of a properly written configuration file:
+This will allow LAUI-Lib to keep track of your appenders and make them available to LAUI.  This tag should be a child of your &lt;configuration> tag.  You can still use LAUI if you do not add this to your configuration file.  Here is an example of a properly written configuration file:
 
     <configuration>
     
