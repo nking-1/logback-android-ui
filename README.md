@@ -14,20 +14,88 @@ LAUI provides a basic Logcat reader and a reader for each of your file-based app
 
 ##Quick Start
 
-Clone this repository.
+###Building
+Clone this repository.  This project is built with maven.  To build the project, run in a terminal:
 
-This project is built with maven.
+    mvn clean install
 
-mvn clean install
+And to install LAUI on all adb connected devices:
 
-And to install on all adb connected phones...
-
-cd laui
-
-mvn android:deploy
+    cd laui
+    mvn android:deploy
  
-This provides a means for looking at the android logcat log.
-If an android application has been outfitted with Laui the
-applications loggers can be configured dynamically.
+###Using LAUI-Lib in your project
+####For Eclipse users
+Import into Eclipse the LAUI-Lib project in the lauilib directory of this repository.  Right click on your project and click Properties.  Click on the Android tab on the left.  In the Library section of the lower part of the window, click the "Add..." button, and select the LAUI-Lib project in the dialog that pops up.  Click Apply and Ok.
 
- 
+Alternatively, after building LAUI-Lib with Maven, you can put the generated jar file in your libs folder of your project.  Android will automatically include it as a dependency in your builds.
+
+####For everyone else
+Build this project with Maven and include the generated LAUI-Lib jar file as a dependency in your build scripts.
+
+###Setting up the ContentProvider
+LAUI-Lib includes a ContentProvider to allow LAUI to display and edit your loggers.  This ContentProvider must be declared in your application's manifest file in order for it to function.
+
+In your AndroidManifest.xml, include the following lines:
+
+    <provider
+            android:name="edu.vu.isis.logger.lib.LauiContentProvider"
+            android:authorities="[your application's package name].LauiContentProvider" />
+            
+As an example, here is a sample manifest file:
+
+    <?xml version="1.0" encoding="utf-8"?>
+    <manifest xmlns:android="http://schemas.android.com/apk/res/android"
+        package="edu.vu.isis.logger.test"
+        android:versionCode="1"
+        android:versionName="1.0" >
+    
+        <uses-sdk
+            android:minSdkVersion="8"
+            android:targetSdkVersion="15" />
+    
+        <application
+            android:icon="@drawable/ic_launcher"
+            android:label="@string/app_name" >
+            <!-- Omitted code -->
+    
+            <provider
+                android:name="edu.vu.isis.logger.lib.LauiContentProvider"
+                android:authorities="edu.vu.isis.logger.test.LauiContentProvider" />
+        </application>
+    
+    </manifest>
+            
+Notice how the package name declared in the manifest tag's package attribute exactly matches the android:authorities attribute inside the provider tag.  <b>This is absolutely necessary since LAUI's ContentProvider generates its authority from your application's package name.</b>  If these do not match, then LAUI will find your loggers.
+
+###Setting up the AppenderStore
+Logback uses appender objects to direct the output of loggers.  Appenders are attached to loggers, and the loggers send their logs to their appenders for output.  LAUI allows you to change which appenders are attached to your loggers so, for example, you could change one of your loggers from writing to Logcat to writing to a file.
+
+However, Logback does not, by default, keep track of its instantiated appenders at runtime like it keeps track of its loggers.  In order to allow this, include the following in your Logback XML configuration file:
+    
+    <newRule pattern="configuration/appender" actionClass="edu.vu.isis.logger.lib.AppenderStoreAction"/>
+    
+This will allow LAUI-Lib to keep track of your appenders and make them available to LAUI.  This tag should be added inside of your <configuration> tag.  You can still use LAUI if you do not add this to your configuration file.  Here is an example of a properly written configuration file:
+
+    <configuration>
+    
+        <!-- This new rule causes joran to record each new appender into the appender 
+            store. The store is used to display the appenders. -->
+        <newRule pattern="configuration/appender"
+            actionClass="edu.vu.isis.logger.lib.AppenderStoreAction"/>
+            
+        <appender name="LOGCAT" class="ch.qos.logback.classic.android.LogcatAppender">
+            <checkLoggable>false</checkLoggable>
+            <tagEncoder>
+                <pattern>laui.%logger{22}</pattern>
+    		      </tagEncoder>
+    		      <encoder>
+    			         <pattern>[%method] %msg%n</pattern>
+    		      </encoder>
+       	</appender>
+     
+    	  <root level="WARN">
+    		     <appender-ref ref="LOGCAT" />
+    	  </root>
+    
+    </configuration>
