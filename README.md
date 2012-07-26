@@ -25,6 +25,8 @@ And to install LAUI on all adb connected devices:
     mvn android:deploy
  
 ###Using LAUI-Lib in your project
+First, set up your project to use logback-android as instructed at https://github.com/tony19/logback-android.  Then, follow the instructions that are relevant to you below.
+
 ####For Eclipse users
 Import into Eclipse the LAUI-Lib project in the lauilib directory of this repository.  Right click on your project and click Properties.  Click on the Android tab on the left.  In the Library section of the lower part of the window, click the "Add..." button, and select the LAUI-Lib project in the dialog that pops up.  Click Apply and Ok.
 
@@ -101,3 +103,14 @@ This will allow LAUI-Lib to keep track of your appenders and make them available
     </configuration>
 
 To read more about appenders, see http://logback.qos.ch/manual/appenders.html
+
+###Using LAUI
+Once you have completed the above steps, your project will be ready for use with LAUI.  Install LAUI on the device and open it.  If your project is configured correctly and installed on the device, you should see it in a list of supported applications.  Simply select your application, and you will be ready to view and edit your loggers.
+
+####Troubleshooting
+If the only logger you see is ROOT, then it is because your application has not yet instantiated any loggers.  This is usually caused by not opening your application before opening LAUI.  To fix this, open your application, then go back to LAUI and refresh the logger list.  This can be done by either pressing the menu button and selecting the force refresh button or by exiting the logger editor and reselecting your application from the list.
+
+If you only see a logger called ROOT_NOT_FOUND, then it is probably a sign that you did not configure your application correctly.  Ensure that you have correctly configured logback-android and LAUI-Lib, then try refreshing the list as described above.  If the issue persists, please file a bug report
+
+##Reporting issues/bugs
+Please file all issues on Github.  We will address them as soon as we can.
