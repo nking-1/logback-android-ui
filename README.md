@@ -67,7 +67,7 @@ As an example, here is a sample manifest file:
     
     </manifest>
             
-Notice how the package name declared in the manifest tag's package attribute exactly matches the android:authorities attribute inside the provider tag.  <b>This is absolutely necessary since LAUI's ContentProvider generates its authority from your application's package name.</b>  If these do not match, then LAUI will find your loggers.
+Notice how the package name declared in the manifest tag's package attribute exactly matches the android:authorities attribute inside the provider tag.  <b>This is absolutely necessary since LAUI's ContentProvider generates its authority from your application's package name.</b>  If these do not match, then LAUI will not find your loggers.
 
 ###Setting up the AppenderStore
 Logback uses appender objects to direct the output of loggers.  Appenders are attached to loggers, and the loggers send their logs to their appenders for output.  LAUI allows you to change which appenders are attached to your loggers so, for example, you could change one of your loggers from writing to Logcat to writing to a file.
