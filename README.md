@@ -28,7 +28,7 @@ And to install LAUI on all adb connected devices:
 ####For Eclipse users
 Import into Eclipse the LAUI-Lib project in the lauilib directory of this repository.  Right click on your project and click Properties.  Click on the Android tab on the left.  In the Library section of the lower part of the window, click the "Add..." button, and select the LAUI-Lib project in the dialog that pops up.  Click Apply and Ok.
 
-Alternatively, after building LAUI-Lib with Maven, you can put the generated jar file in your libs folder of your project.  Android will automatically include it as a dependency in your builds.
+Alternatively, after building LAUI-Lib with Maven, you can put the generated jar file in the libs folder of your project.  Android will automatically include it as a dependency in your builds.
 
 ####For everyone else
 Build this project with Maven and include the generated LAUI-Lib jar file as a dependency in your build scripts.
