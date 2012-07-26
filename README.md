@@ -1,5 +1,4 @@
-Logback Android User Interface (LAUI)
-==========================================
+#Logback Android User Interface (LAUI)
 
 The logback-android project provides an excellent logging framework.  However, it lacks a means for the operator to conveniently view or configure the logging behavior at runtime.  This project fills that gap by adding a user inteface to logback-android.  The name of this project is Logback Android UI, or LAUI for short (pronounced like Maui).
 
