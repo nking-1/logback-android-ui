@@ -88,14 +88,16 @@ This will allow LAUI-Lib to keep track of your appenders and make them available
             <checkLoggable>false</checkLoggable>
             <tagEncoder>
                 <pattern>laui.%logger{22}</pattern>
-    		      </tagEncoder>
-    		      <encoder>
-    			         <pattern>[%method] %msg%n</pattern>
-    		      </encoder>
+    		</tagEncoder>
+    		<encoder>
+    			<pattern>[%method] %msg%n</pattern>
+    		</encoder>
        	</appender>
      
-    	  <root level="WARN">
-    		     <appender-ref ref="LOGCAT" />
-    	  </root>
+    	<root level="WARN">
+    	    <appender-ref ref="LOGCAT" />
+    	</root>
     
     </configuration>
+
+To read more about appenders, see http://logback.qos.ch/manual/appenders.html
