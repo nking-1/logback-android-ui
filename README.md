@@ -14,7 +14,7 @@ LAUI provides a basic Logcat reader and a reader for each of your file-based app
 ##Quick Start
 
 ###Building
-Clone this repository.  This project is built with maven.  To build the project, run in a terminal:
+Clone this repository.  This project is built with maven.  To build the project, change directory to the location of your clone, and run in a terminal:
 
     mvn clean install
 
@@ -22,6 +22,13 @@ And to install LAUI on all adb connected devices:
 
     cd laui
     mvn android:deploy
+
+####A note about building
+Currently (as of July 30, 2012), the Maven builds are still a work in progress.  If you try to build LAUI right now, it will probably fail.  However, there is a workaround.  If logback-android is in your local Maven repository, you should be able to build LAUI.  To install logback-android to your local repository, go to https://github.com/tony19/logback-android and clone the logback-android repository.  Then, run the "mvn clean install" command in the directory that you cloned to.
+
+*You will likely have to checkout the issue7 branch for Maven builds to work at this time.  You will also probably have to disable tests until the issues with building logback-android are resolved. Use the command "mvn -DskipTests clean install" to do so.*
+
+Once logback-android has been built, try building LAUI again.  If all goes well, the build should succeed.
  
 ###Using LAUI-Lib in your project
 First, set up your project to use logback-android as instructed at https://github.com/tony19/logback-android.  Then, follow the instructions that are relevant to you below.
