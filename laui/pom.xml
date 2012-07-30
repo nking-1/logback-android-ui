@@ -60,15 +60,8 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/ma
       <groupId>${project.groupId}</groupId>
       <artifactId>lauilib</artifactId>
       <version>${project.version}</version>
-      <type>jar</type>
-      <scope>compile</scope>
     </dependency>
 
-    <dependency>
-      <groupId>ch.qos.logback</groupId>
-      <artifactId>logback</artifactId>
-      <scope>compile</scope>
-    </dependency>
 
     <dependency>
       <groupId>org.slf4j</groupId>

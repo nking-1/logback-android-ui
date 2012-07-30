@@ -25,6 +25,18 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/ma
     </dependency>
 
     <dependency>
+      <groupId>com.github.tony19</groupId>
+      <artifactId>logback-android-classic</artifactId>
+      <version>1.0.6-1-SNAPSHOT</version>
+    </dependency>
+
+    <dependency>
+      <groupId>com.github.tony19</groupId>
+      <artifactId>logback-android-core</artifactId>
+      <version>1.0.6-1-SNAPSHOT</version>
+    </dependency>
+
+    <dependency>
       <groupId>com.google.android</groupId>
       <artifactId>android</artifactId>
       <scope>provided</scope>
@@ -33,6 +45,7 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/ma
   </dependencies>
 
   <build>
+    <sourceDirectory>src</sourceDirectory>
     <finalName>${project.artifactId}</finalName>
     <resources>
       <resource>

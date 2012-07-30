@@ -3,5 +3,6 @@
 
     <string name="hello">Hello World!</string>
     <string name="app_name">LAUI-Lib</string>
+    <string name="permdesc_read_write_loggers">Allows the application to read and update the settings of Logback loggers in another application</string>
 
 </resources>

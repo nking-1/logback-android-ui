@@ -6,11 +6,19 @@
 
     <uses-sdk android:minSdkVersion="8" />
 
+    <permission
+        android:name="edu.vu.isis.logger.permission.READ_WRITE_LOGGERS"
+        android:description="@string/permdesc_read_write_loggers"
+        android:label="Read and update Logback loggers"
+        android:protectionLevel="normal" />
+
     <application
         android:icon="@drawable/ic_launcher"
         android:label="@string/app_name" >
-        <provider android:name=".LauiContentProvider"
-			android:authorities="edu.vu.isis.logger.LauiContentProvider" />
+        <provider
+            android:name=".LauiContentProvider"
+            android:authorities="edu.vu.isis.logger.LauiContentProvider"
+            android:permission="edu.vu.isis.logger.permission.READ_WRITE_LOGGERS" />
     </application>
 
 </manifest>
