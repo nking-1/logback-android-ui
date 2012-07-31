@@ -14,7 +14,7 @@ LAUI provides a basic Logcat reader and a reader for each of your file-based app
 ##Quick Start
 
 ###Building
-Clone this repository.  This project is built with maven.  To build the project, run in a terminal:
+Clone this repository.  This project is built with maven.  To build the project, change directory to the location of your clone, and run in a terminal:
 
     mvn clean install
 
@@ -22,6 +22,13 @@ And to install LAUI on all adb connected devices:
 
     cd laui
     mvn android:deploy
+
+####A note about building
+Currently (as of July 30, 2012), the Maven builds are still a work in progress.  If you try to build LAUI right now, it will probably fail.  However, there is a workaround.  If logback-android is in your local Maven repository, you should be able to build LAUI.  To install logback-android to your local repository, go to https://github.com/tony19/logback-android and clone the logback-android repository.  Then, run the "mvn clean install" command in the directory that you cloned to.
+
+You will likely have to checkout the issue7 branch of logback-android for Maven builds to work until that branch is merged into master.
+
+Once logback-android has been built, try building LAUI again.  If all goes well, the build should succeed.
  
 ###Using LAUI-Lib in your project
 First, set up your project to use logback-android as instructed at https://github.com/tony19/logback-android.  Then, follow the instructions that are relevant to you below.
@@ -76,7 +83,9 @@ However, Logback does not, by default, keep track of its instantiated appenders 
     
     <newRule pattern="configuration/appender" actionClass="edu.vu.isis.logger.lib.AppenderStoreAction"/>
     
-This will allow LAUI-Lib to keep track of your appenders and make them available to LAUI.  This tag should be a child of your &lt;configuration> tag.  You can still use LAUI if you do not add this to your configuration file.  Here is an example of a properly written configuration file:
+This will allow LAUI-Lib to keep track of your appenders and make them available to LAUI.  This tag should be a child of your &lt;configuration> tag.  You can still use LAUI if you do not add this to your configuration file, but you will not be able to configure the appender attachments on loggers.
+
+Here is an example of a properly written configuration file:
 
     <configuration>
     
@@ -109,7 +118,7 @@ Once you have completed the above steps, your project will be ready for use with
 ####Troubleshooting
 If the only logger you see is ROOT, then it is because your application has not yet instantiated any loggers.  This is usually caused by not opening your application before opening LAUI.  To fix this, open your application, then go back to LAUI and refresh the logger list.  This can be done by either pressing the menu button and selecting the force refresh button or by exiting the logger editor and reselecting your application from the list.
 
-If you only see a logger called ROOT_NOT_FOUND, then it is probably a sign that you did not configure your application correctly.  Ensure that you have correctly configured logback-android and LAUI-Lib, then try refreshing the list as described above.  If the issue persists, please file a bug report
+If you only see a logger called ROOT_NOT_FOUND, then it is probably a sign that you did not configure your application correctly for use with LAUI.  Ensure that you have correctly configured logback-android and LAUI-Lib, then try refreshing the list as described above.  If the issue persists, please file a bug report
 
 ##Reporting issues/bugs
 Please file all issues on Github.  We will address them as soon as we can.
