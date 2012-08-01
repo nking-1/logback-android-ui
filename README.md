@@ -27,7 +27,11 @@ And to install LAUI on all adb connected devices:
 First, set up your project to use logback-android as instructed at https://github.com/tony19/logback-android.  Then, follow the instructions that are relevant to you below.
 
 ####For Eclipse users
-Import into Eclipse the LAUI-Lib project in the lauilib directory of this repository.  Right click on your project and click Properties.  Click on the Android tab on the left.  In the Library section of the lower part of the window, click the "Add..." button, and select the LAUI-Lib project in the dialog that pops up.  Click Apply and Ok.
+Import into Eclipse the LAUI-Lib project found in the lauilib directory of this repository.  
+
+*Note: you may have to adjust the LAUI-Lib project to target your specific version of Android in Eclipse. Eclipse will give you an error when importing LAUI-Lib if this is the case.*
+
+Right click on your project and click Properties.  Click on the Android tab on the left.  In the Library section of the lower part of the window, click the "Add..." button, and select the LAUI-Lib project in the dialog that pops up.  Click Apply and Ok.
 
 Alternatively, after building LAUI-Lib with Maven, you can put the generated jar file in the libs folder of your project.  Android will automatically include it as a dependency in your builds.
 
@@ -69,7 +73,7 @@ As an example, here is a sample manifest file:
             
 Notice how the package name declared in the manifest tag's package attribute exactly matches the android:authorities attribute inside the provider tag.  <b>This is absolutely necessary since LAUI's ContentProvider generates its authority from your application's package name.</b>  If these do not match, then LAUI will not find your loggers.
 
-###Setting up the AppenderStore
+###Setting up the AppenderStore (Optional)
 Logback uses appender objects to direct the output of loggers.  Appenders are attached to loggers, and the loggers send their logs to their appenders for output.  LAUI allows you to change which appenders are attached to your loggers so, for example, you could change one of your loggers from writing to Logcat to writing to a file.
 
 However, Logback does not, by default, keep track of its instantiated appenders at runtime like it keeps track of its loggers.  In order to allow this, include the following in your Logback XML configuration file:
