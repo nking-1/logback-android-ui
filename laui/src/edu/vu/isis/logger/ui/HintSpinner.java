@@ -10,12 +10,20 @@ purpose whatsoever, and to have or authorize others to do so.
  */
 package edu.vu.isis.logger.ui;
 
+import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import android.content.Context;
 import android.database.DataSetObserver;
 import android.util.AttributeSet;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.AdapterView;
 import android.widget.Spinner;
 import android.widget.SpinnerAdapter;
 import android.widget.TextView;
@@ -23,21 +31,22 @@ import android.widget.TextView;
 /**
  * Allows a Spinner to show a hint/prompt instead of one of its choices whenever
  * the Spinner is waiting to be clicked.
+ * 
  * @author Nick King
  */
 public class HintSpinner extends Spinner {
 
 	private String mHint;
+	private Method setNextSelectedPositionInt;
+	private Field mOldSelectedPosition;
 	private boolean showHintOnce = false;
 	private boolean alwaysShowHint = false;
-	
+
+	private static final Logger logger = LoggerFactory
+			.getLogger("ui.hintspinner");
+
 	public HintSpinner(Context context) {
 		super(context);
-		init();
-	}
-
-	public HintSpinner(Context context, int mode) {
-		super(context, mode);
 		init();
 	}
 
@@ -51,26 +60,60 @@ public class HintSpinner extends Spinner {
 		init();
 	}
 
-	public HintSpinner(Context context, AttributeSet attrs, int defStyle,
-			int mode) {
-		super(context, attrs, defStyle, mode);
-		init();
-	}
-
 	private void init() {
 		setHint((String) getPrompt());
+		try {
+			setNextSelectedPositionInt = AdapterView.class.getDeclaredMethod(
+					"setNextSelectedPositionInt", int.class);
+			setNextSelectedPositionInt.setAccessible(true);
+			mOldSelectedPosition = AdapterView.class.getDeclaredField("mOldSelectedPosition");
+			mOldSelectedPosition.setAccessible(true);
+		} catch (NoSuchMethodException e) {
+			logger.warn("setNextSelectedPositionInt method not found", e);
+		} catch (NoSuchFieldException e) {
+			logger.warn("mOldSelectedPosition field not found", e);
+		}
 	}
 
 	public void setHint(String hint) {
 		mHint = hint;
 	}
-	
+
 	public void setAlwaysShowHint(boolean b) {
 		alwaysShowHint = b;
 	}
-	
+
 	public void setShowHintOnce(boolean b) {
 		showHintOnce = b;
+	}
+
+	public void clearSelection() {
+		try {
+			// Setting the next selected position to be invalid should
+			// have the same effect as "clearing" the selection
+			if (setNextSelectedPositionInt != null) {
+				setNextSelectedPositionInt.invoke(this, AdapterView.INVALID_POSITION);
+			}
+			
+			// Setting the old selected position to be invalid will
+			// allow the user to click the same selection as last time
+			// and still have a callback event fired.  Without this,
+			// if the user were to click the dialog's item at position n,
+			// the selection were cleared, and the user were to click the
+			// (now unselected) item at position n again, the callback
+			// would not be fired because AdapterView checks to see if
+			// the old selected position differs from the position that
+			// was just selected before firing a callback.
+			if(mOldSelectedPosition != null) {
+				mOldSelectedPosition.set(this, AdapterView.INVALID_POSITION);
+			}
+		} catch (IllegalArgumentException e) {
+			logger.warn("", e);
+		} catch (IllegalAccessException e) {
+			logger.warn("", e);
+		} catch (InvocationTargetException e) {
+			logger.warn("", e);
+		}
 	}
 
 	@Override
@@ -119,18 +162,18 @@ public class HintSpinner extends Spinner {
 		@Override
 		public View getView(int position, View convertView, ViewGroup parent) {
 			View view = mAdapter.getView(position, convertView, parent);
-			
+
 			// Don't simplify with De Morgan's, too confusing
-			if(!(showHintOnce || alwaysShowHint)) {
+			if (!(showHintOnce || alwaysShowHint)) {
 				return view;
 			}
-			
+
 			// Set this false for next time
 			showHintOnce = false;
-			
+
 			// It's possible that we're wrapping an adapter that doesn't make
-			// TextViews.  If the adapter *is* making TextViews, we'll use their
-			// view instead of inflating a new one.  Otherwise, we'll inflate
+			// TextViews. If the adapter *is* making TextViews, we'll use their
+			// view instead of inflating a new one. Otherwise, we'll inflate
 			// the default spinner item.
 			if (!(view instanceof TextView)) {
 				view = LayoutInflater.from(getContext()).inflate(
@@ -162,6 +205,5 @@ public class HintSpinner extends Spinner {
 		}
 
 	}
-
 
 }

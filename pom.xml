@@ -5,8 +5,8 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/ma
 
   <modelVersion>4.0.0</modelVersion>
   <properties>
-    <vandy.release.url>http://ammo.isis.vanderbilt.edu:8081/nexus/content/repositories/Vanderbilt/</vandylib.release.url>
-    <vandy.snapshot.url>http://ammo.isis.vanderbilt.edu:8081/nexus/content/repositories/vanderbilt-snapshot/</vandylib.snapshot.url>
+    <vandy.release.url>http://ammo.isis.vanderbilt.edu:8081/nexus/content/repositories/Vanderbilt/</vandy.release.url>
+    <vandy.snapshot.url>http://ammo.isis.vanderbilt.edu:8081/nexus/content/repositories/vanderbilt-snapshot/</vandy.snapshot.url>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
   </properties>
 

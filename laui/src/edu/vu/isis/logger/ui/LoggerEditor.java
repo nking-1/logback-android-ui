@@ -404,6 +404,7 @@ public class LoggerEditor extends ListActivity {
 		final LoggerHolder nextSelectedLogger = (LoggerHolder) parent
 				.getItemAtPosition(position);
 
+		levelSpinner.clearSelection();
 		updateSelText(nextSelectedLogger.name);
 
 		this.selectedLogger = nextSelectedLogger;
