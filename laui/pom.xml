@@ -105,8 +105,8 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/ma
                Nexus appears to make APK inaccessible vai search -->
           <attachJar>false</attachJar>
           <jvmArguments>
-            <argument>-Xms1500m</argument>
-            <argument>-Xmx1500m</argument>
+            <argument>-Xms256m</argument>
+            <argument>-Xmx768m</argument>
           </jvmArguments>
         </configuration>
         <extensions>true</extensions>

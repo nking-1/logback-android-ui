@@ -28,7 +28,7 @@
 	        android:onClick="configureAppenders"
 	        android:layout_weight="50" />
 	    <view
-            class="edu.vu.isis.logger.ui.NoDefaultSpinner"
+            class="edu.vu.isis.logger.ui.HintSpinner"
             android:id="@+id/level_spinner"
             android:layout_width="0dp"
             android:layout_height="wrap_content"

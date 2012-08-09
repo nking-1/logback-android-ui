@@ -5,8 +5,9 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/ma
 
   <modelVersion>4.0.0</modelVersion>
   <properties>
-    <build>${basedir}/build</build>
-    <dist>${basedir}/dist</dist>
+    <vandy.release.url>http://ammo.isis.vanderbilt.edu:8081/nexus/content/repositories/Vanderbilt/</vandylib.release.url>
+    <vandy.snapshot.url>http://ammo.isis.vanderbilt.edu:8081/nexus/content/repositories/vanderbilt-snapshot/</vandylib.snapshot.url>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
   </properties>
 
   <groupId>edu.vu.isis</groupId>
@@ -48,12 +49,6 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/ma
         <scope>compile</scope>
       </dependency>
 
-      <dependency>
-        <groupId>ch.qos.logback</groupId>
-        <artifactId>logback</artifactId>
-        <version>1.0.1</version>
-        <scope>compile</scope>
-      </dependency>
     </dependencies>
   </dependencyManagement>
 
