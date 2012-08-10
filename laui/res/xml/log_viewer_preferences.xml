@@ -18,6 +18,13 @@
             android:key="regular_expression"
             android:summary="Regular expression to match against incoming logs"
             android:title="Regular expression" />
+        <EditTextPreference
+            android:defaultValue=""
+            android:dialogMessage="Enter arguments for logcat"
+            android:dialogTitle="Logcat arguments"
+            android:key="logcat_arguments"
+            android:summary="These should be the same as you would type in a terminal"
+            android:title="Logcat arguments" />
         <CheckBoxPreference
             android:defaultValue="true"
             android:key="colored_logcat_logs"

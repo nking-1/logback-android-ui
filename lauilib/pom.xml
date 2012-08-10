@@ -16,6 +16,11 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/ma
   <artifactId>lauilib</artifactId>
   <packaging>jar</packaging>
   <name>lauilib</name>
+  <description>
+	A library to allow Android applications to be used by LAUI (Logback Android
+	UI).  Applications will need this library so that LAUI can read and edit
+	their Logback loggers.
+  </description>
 
   <dependencies>
     <dependency>

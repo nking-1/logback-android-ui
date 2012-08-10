@@ -66,7 +66,8 @@ public class HintSpinner extends Spinner {
 			setNextSelectedPositionInt = AdapterView.class.getDeclaredMethod(
 					"setNextSelectedPositionInt", int.class);
 			setNextSelectedPositionInt.setAccessible(true);
-			mOldSelectedPosition = AdapterView.class.getDeclaredField("mOldSelectedPosition");
+			mOldSelectedPosition = AdapterView.class
+					.getDeclaredField("mOldSelectedPosition");
 			mOldSelectedPosition.setAccessible(true);
 		} catch (NoSuchMethodException e) {
 			logger.warn("setNextSelectedPositionInt method not found", e);
@@ -92,19 +93,21 @@ public class HintSpinner extends Spinner {
 			// Setting the next selected position to be invalid should
 			// have the same effect as "clearing" the selection
 			if (setNextSelectedPositionInt != null) {
-				setNextSelectedPositionInt.invoke(this, AdapterView.INVALID_POSITION);
+				setNextSelectedPositionInt.invoke(this,
+						AdapterView.INVALID_POSITION);
 			}
-			
-			// Setting the old selected position to be invalid will
-			// allow the user to click the same selection as last time
-			// and still have a callback event fired.  Without this,
-			// if the user were to click the dialog's item at position n,
-			// the selection were cleared, and the user were to click the
-			// (now unselected) item at position n again, the callback
-			// would not be fired because AdapterView checks to see if
-			// the old selected position differs from the position that
-			// was just selected before firing a callback.
-			if(mOldSelectedPosition != null) {
+
+			/*
+			 * Setting the old selected position to be invalid will allow the
+			 * user to click the same selection as last time and still have a
+			 * callback event fired. Without this, if the user were to click the
+			 * dialog's item at position n, the selection were cleared, and the
+			 * user were to click the (now unselected) item at position n again,
+			 * the callback would not be fired because AdapterView checks to see
+			 * if the old selected position differs from the position that was
+			 * just selected before firing a callback.
+			 */
+			if (mOldSelectedPosition != null) {
 				mOldSelectedPosition.set(this, AdapterView.INVALID_POSITION);
 			}
 		} catch (IllegalArgumentException e) {
@@ -116,6 +119,11 @@ public class HintSpinner extends Spinner {
 		}
 	}
 
+	/**
+	 * This wraps a SpinnerAdapter, adding behavior to its getView() method.
+	 * Every other method is left as is, but we still have to implement the
+	 * large number of methods defined in the SpinnerAdapter interface.
+	 */
 	@Override
 	public void setAdapter(SpinnerAdapter adapter) {
 		super.setAdapter(new HintSpinnerAdapter(adapter));
@@ -163,23 +171,24 @@ public class HintSpinner extends Spinner {
 		public View getView(int position, View convertView, ViewGroup parent) {
 			View view = mAdapter.getView(position, convertView, parent);
 
-			// Don't simplify with De Morgan's, too confusing
-			if (!(showHintOnce || alwaysShowHint)) {
-				return view;
+			if (showHintOnce || alwaysShowHint) {
+				// Set this false for next time (even if alwaysShowHint is true)
+				showHintOnce = false;
+
+				/*
+				 * It's possible that we're wrapping an adapter that doesn't
+				 * make TextViews. If the adapter *is* making TextViews, we'll
+				 * use their view instead of inflating a new one. Otherwise,
+				 * we'll inflate the default spinner item.
+				 */
+				if (!(view instanceof TextView)) {
+					view = LayoutInflater.from(getContext())
+							.inflate(android.R.layout.simple_spinner_item,
+									parent, false);
+				}
+				((TextView) view).setText(mHint);
 			}
 
-			// Set this false for next time
-			showHintOnce = false;
-
-			// It's possible that we're wrapping an adapter that doesn't make
-			// TextViews. If the adapter *is* making TextViews, we'll use their
-			// view instead of inflating a new one. Otherwise, we'll inflate
-			// the default spinner item.
-			if (!(view instanceof TextView)) {
-				view = LayoutInflater.from(getContext()).inflate(
-						android.R.layout.simple_spinner_item, parent, false);
-			}
-			((TextView) view).setText(mHint);
 			return view;
 		}
 

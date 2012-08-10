@@ -207,7 +207,7 @@ public class LogViewerBase extends ListActivity {
 	/**
 	 * Unpauses the log reader, causing it to resume its reading
 	 */
-	protected void play() {
+	void play() {
 		this.isPaused.set(false);
 		if (mLogReader != null) {
 			this.mLogReader.resume();
@@ -217,7 +217,7 @@ public class LogViewerBase extends ListActivity {
 	/**
 	 * Pauses the log reader, causing it to stop reading temporarily.
 	 */
-	protected void pause() {
+	void pause() {
 		this.isPaused.set(true);
 		if (mLogReader != null) {
 			this.mLogReader.pause();
@@ -227,14 +227,14 @@ public class LogViewerBase extends ListActivity {
 	/**
 	 * Sets the listview's scroll to the top of the list
 	 */
-	protected void setScrollToTop() {
+	void setScrollToTop() {
 		this.mListView.setSelection(0);
 	}
 
 	/**
 	 * Sets the listview's scroll to the bottom of the list
 	 */
-	protected void setScrollToBottom() {
+	void setScrollToBottom() {
 		this.mListView.setSelection(this.mAdapter.getCount() - 1);
 	}
 
