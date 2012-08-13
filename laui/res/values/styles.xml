@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <style name="log_viewer_dialog_spacer">
-        <item name="android:layout_width">wrap_content</item>
-        <item name="android:layout_height">2dp</item>
-        <item name="android:background">#90909090</item>
-    </style>
-    
-</resources>
