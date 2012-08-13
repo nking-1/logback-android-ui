@@ -7,6 +7,7 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/ma
   <properties>
     <laui.type>schema</laui.type>
   </properties>
+
   <parent>
     <groupId>edu.vu.isis</groupId>
     <artifactId>laui-parent</artifactId>
@@ -21,6 +22,20 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/ma
 	UI).  Applications will need this library so that LAUI can read and edit
 	their Logback loggers.
   </description>
+
+  <url>http://nking92.github.com/logback-android-ui/</url>
+
+  <licenses>
+    <license>
+      <name>Vanderbilt-ISIS</name>
+      <url>http://nking92.github.com/logback-android-ui/vandy-isis-license.html</url>
+      <distribution>repo</distribution>
+    </license>
+  </licenses>
+
+  <scm>
+    <url>https://github.com/Nking92/logback-android-ui</url>
+  </scm>
 
   <dependencies>
     <dependency>

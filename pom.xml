@@ -4,17 +4,35 @@ xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
 
   <modelVersion>4.0.0</modelVersion>
+  <groupId>edu.vu.isis</groupId>
+  <artifactId>laui-parent</artifactId>
+  <version><!--@VERSION-->1.0.0-SNAPSHOT<!--VERSION@--></version>
+  <packaging>pom</packaging>
+
   <properties>
     <vandy.release.url>http://ammo.isis.vanderbilt.edu:8081/nexus/content/repositories/Vanderbilt/</vandy.release.url>
     <vandy.snapshot.url>http://ammo.isis.vanderbilt.edu:8081/nexus/content/repositories/vanderbilt-snapshot/</vandy.snapshot.url>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
   </properties>
 
-  <groupId>edu.vu.isis</groupId>
-  <artifactId>laui-parent</artifactId>
-  <packaging>pom</packaging>
-  <version><!--@VERSION-->1.0.0-SNAPSHOT<!--VERSION@--></version>
   <name>laui parent project</name>
+  <description>
+    The parent of the Logback-Android UI project, which includes both LAUI
+    and its library, LAUI-Lib.
+  </description>
+  <url>http://nking92.github.com/logback-android-ui/</url>
+
+  <licenses>
+    <license>
+      <name>Vanderbilt-ISIS</name>
+      <url>http://nking92.github.com/logback-android-ui/vandy-isis-license.html</url>
+      <distribution>repo</distribution>
+    </license>
+  </licenses>
+
+  <scm>
+    <url>https://github.com/Nking92/logback-android-ui</url>
+  </scm>
 
   <modules>
     <module>laui</module>
@@ -66,25 +84,6 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/ma
         </plugin>
 
         <plugin>
-          <groupId>org.apache.maven.plugins</groupId>
-          <artifactId>maven-antrun-plugin</artifactId>
-          <version>1.6</version>
-	        <dependencies>
-	          <dependency>
-	            <groupId>ant-contrib</groupId>
-	            <artifactId>ant-contrib</artifactId>
-	            <version>1.0b3</version>
-	            <exclusions>
-	              <exclusion>
-	                <groupId>ant</groupId>
-	                <artifactId>ant</artifactId>
-	              </exclusion>
-	            </exclusions>
-	          </dependency>
-	        </dependencies>
-        </plugin>
-
-        <plugin>
           <groupId>org.codehaus.mojo</groupId>
           <artifactId>properties-maven-plugin</artifactId>
           <version>1.0-alpha-2</version>
@@ -101,75 +100,6 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/ma
           <artifactId>android-maven-plugin</artifactId>
           <version>3.0.0</version>
         </plugin> 
-        
-        <plugin>
-	      <groupId>org.eclipse.m2e</groupId>
-	      <artifactId>lifecycle-mapping</artifactId>
-	      <version>1.0.0</version>
-	      <configuration>
-	        <lifecycleMappingMetadata>
-	          <pluginExecutions>
-	            
-	            <pluginExecution>
-	              <pluginExecutionFilter>
-	                <groupId>org.apache.maven.plugins</groupId>
-        			<artifactId>maven-antrun-plugin</artifactId>
-	                <versionRange>[1.0.0,)</versionRange>
-	                <goals>
-	                  <goal>run</goal>
-	                </goals>
-	              </pluginExecutionFilter>
-	              <action>
-	                <ignore />
-	              </action>
-	            </pluginExecution>
-	            
-	            <pluginExecution>
-	              <pluginExecutionFilter>
-	                <groupId>org.codehaus.mojo</groupId>
-        			<artifactId>build-helper-maven-plugin</artifactId>
-	                <versionRange>[1.0.0,)</versionRange>
-	                <goals>
-	                  <goal>add-source</goal>
-	                </goals>
-	              </pluginExecutionFilter>
-	              <action>
-	                <ignore />
-	              </action>
-	            </pluginExecution>
-	              
-         		<pluginExecution>
-	              <pluginExecutionFilter>
-	                <groupId>com.jayway.maven.plugins.android.generation2</groupId>
-        			<artifactId>android-maven-plugin</artifactId>
-	                <versionRange>[1.0.0,)</versionRange>
-	                <goals>
-	                  <goal>generate-sources</goal>
-	                  <goal>proguard</goal>
-	                </goals>
-	              </pluginExecutionFilter>
-	              <action>
-	                <ignore />
-	              </action>
-	            </pluginExecution>
-	            
-        		<pluginExecution>
-	              <pluginExecutionFilter>
-	                 <groupId>org.codehaus.mojo</groupId>
-	        		<artifactId>properties-maven-plugin</artifactId>
-	                <versionRange>[1.0-alpha-2,)</versionRange>
-	                <goals>
-	                  <goal>read-project-properties</goal>
-	                </goals>
-	              </pluginExecutionFilter>
-	              <action>
-	                <ignore />
-	              </action>
-	            </pluginExecution>
-	          </pluginExecutions>
-	        </lifecycleMappingMetadata>
-	      </configuration>
-	    </plugin>  
               
       </plugins>
     </pluginManagement>
