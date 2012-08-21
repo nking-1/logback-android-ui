@@ -11,7 +11,7 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/ma
   <parent>
     <groupId>edu.vanderbilt.isis</groupId>
     <artifactId>laui-parent</artifactId>
-    <version><!--@VERSION-->1.0.0-SNAPSHOT<!--VERSION@--></version>
+    <version><!--@VERSION-->1.0.0<!--VERSION@--></version>
   </parent>
 
   <artifactId>lauilib</artifactId>
