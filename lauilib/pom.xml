@@ -11,8 +11,16 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/ma
   <parent>
     <groupId>edu.vanderbilt.isis</groupId>
     <artifactId>laui-parent</artifactId>
-    <version><!--@VERSION-->1.0.0<!--VERSION@--></version>
+    <version>1.0.1</version>
   </parent>
+
+  <developers>
+    <developer>
+      <id>nking92</id>
+      <name>Nick King</name>
+      <email>nicholas.b.king@vanderbilt.edu</email>
+    </developer>
+  </developers>
 
   <artifactId>lauilib</artifactId>
   <packaging>jar</packaging>
@@ -34,7 +42,8 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/ma
   </licenses>
 
   <scm>
-    <url>https://github.com/Nking92/logback-android-ui</url>
+    <url>scm:git:git@github.com:Nking92/logback-android-ui.git</url>
+    <connection>scm:git:git@github.com:Nking92/logback-android-ui.git</connection>
   </scm>
 
   <dependencies>
@@ -81,6 +90,18 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/ma
     </resources>
 
     <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-source-plugin</artifactId>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-javadoc-plugin</artifactId>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-gpg-plugin</artifactId>
+      </plugin>
     </plugins>
   </build>
 </project>

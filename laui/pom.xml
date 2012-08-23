@@ -12,48 +12,12 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/ma
   <parent>
     <groupId>edu.vanderbilt.isis</groupId>
     <artifactId>laui-parent</artifactId>
-    <version><!--@VERSION-->1.0.0<!--VERSION@--></version>
+    <version>1.0.1</version>
   </parent>
 
   <artifactId>laui</artifactId>
   <packaging>apk</packaging>
   <name>laui</name>
-
-  <repositories>
-    <repository>
-      <releases>
-        <enabled>true</enabled>
-        <updatePolicy>never</updatePolicy>
-        <checksumPolicy>fail</checksumPolicy>
-      </releases>
-      <snapshots>
-        <enabled>false</enabled>
-        <updatePolicy>always</updatePolicy>
-        <checksumPolicy>warn</checksumPolicy>
-      </snapshots>
-      <id>nexus-vanderbilt</id>
-      <url>${vandy.release.url}</url>
-      <name>laui release</name>
-      <layout>default</layout>
-    </repository>
-
-    <repository>
-      <releases>
-        <enabled>false</enabled>
-        <updatePolicy>always</updatePolicy>
-        <checksumPolicy>warn</checksumPolicy>
-      </releases>
-      <snapshots>
-        <enabled>true</enabled>
-        <updatePolicy>never</updatePolicy>
-        <checksumPolicy>fail</checksumPolicy>
-      </snapshots>
-      <id>nexus-snapshot</id>
-      <url>${vandy.snapshot.url}</url>
-      <name>laui snapshot</name>
-      <layout>default</layout>
-    </repository>
-  </repositories>
 
   <dependencies>
     <dependency>
@@ -81,12 +45,19 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/ma
     <finalName>laui</finalName>
      
     <plugins>
-      <!-- Bug in release plugin prevents other plugin configurations from carrying 
-                                through to child from parent, and forked maven process to create release 
-                                POM will not use source 1.5 unless specified here. Lame... -->
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-compiler-plugin</artifactId>
+      </plugin>
+
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-source-plugin</artifactId>
+      </plugin>
+
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-javadoc-plugin</artifactId>
       </plugin>
 
       <plugin>
@@ -116,19 +87,19 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/ma
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>properties-maven-plugin</artifactId>
         <executions>
-          <execution>
-            <id>intialize-properties</id>
-            <phase>initialize</phase>
-            <goals>
-              <goal>read-project-properties</goal>
-            </goals>
-            <configuration>
-              <files>
-                <file>ant.properties</file>
-              </files>
-            </configuration>
-          </execution>
-        </executions>
+           <execution>
+              <id>intialize-properties</id>
+              <phase>initialize</phase>
+              <goals>
+                <goal>read-project-properties</goal>
+              </goals>
+              <configuration>
+                <files>
+                  <file>ant.properties</file>
+                </files>
+              </configuration>
+            </execution>
+          </executions>
       </plugin>
       
     </plugins>

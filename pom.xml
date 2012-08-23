@@ -6,12 +6,46 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/ma
   <modelVersion>4.0.0</modelVersion>
   <groupId>edu.vanderbilt.isis</groupId>
   <artifactId>laui-parent</artifactId>
-  <version><!--@VERSION-->1.0.0<!--VERSION@--></version>
+  <version>1.0.1</version>
   <packaging>pom</packaging>
 
+  <parent>
+    <groupId>org.sonatype.oss</groupId>
+    <artifactId>oss-parent</artifactId>
+    <version>7</version>
+  </parent>
+
+  <profiles>
+
+    <profile>
+      <id>central-deploy</id>
+      <modules>
+        <module>lauilib</module>
+      </modules> 
+    </profile>
+
+    <profile>
+      <id>default</id>
+      <activation>
+        <activeByDefault>true</activeByDefault>
+      </activation>
+      <modules>
+        <module>laui</module>
+        <module>lauilib</module>
+      </modules>
+    </profile>
+
+  </profiles>
+
+  <developers>
+    <developer>
+      <id>nking92</id>
+      <name>Nick King</name>
+      <email>nicholas.b.king@vanderbilt.edu</email>
+    </developer>
+  </developers>
+
   <properties>
-    <vandy.release.url>http://ammo.isis.vanderbilt.edu:8081/nexus/content/repositories/Vanderbilt/</vandy.release.url>
-    <vandy.snapshot.url>http://ammo.isis.vanderbilt.edu:8081/nexus/content/repositories/vanderbilt-snapshot/</vandy.snapshot.url>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
   </properties>
 
@@ -31,24 +65,11 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/ma
   </licenses>
 
   <scm>
-    <url>https://github.com/Nking92/logback-android-ui</url>
+    <url>scm:git:git@github.com:Nking92/logback-android-ui.git</url>
+    <connection>scm:git:git@github.com:Nking92/logback-android-ui.git</connection>
   </scm>
 
-  <modules>
-    <module>laui</module>
-    <module>lauilib</module>
-  </modules>
-
-  <distributionManagement>
-    <repository>
-      <id>nexus-vanderbilt</id>
-      <url>${vandy.release.url}</url>
-    </repository>
-    <snapshotRepository>
-      <id>nexus-vanderbilt</id>
-      <url>${vandy.snapshot.url}</url>
-    </snapshotRepository>
-  </distributionManagement>
+  
 
   <dependencyManagement>
     <dependencies>
@@ -73,6 +94,7 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/ma
   <build>
     <pluginManagement>
       <plugins>
+
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-compiler-plugin</artifactId>
@@ -101,8 +123,56 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/ma
           <version>3.0.0</version>
         </plugin> 
               
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-source-plugin</artifactId>
+          <executions>
+            <execution>
+              <id>attach-sources</id>
+              <goals>
+                <goal>jar</goal>
+              </goals>
+            </execution>
+          </executions>
+        </plugin>
+
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-javadoc-plugin</artifactId>
+          <version>2.8.1</version>
+          <executions>
+            <execution>
+              <id>attach-javadocs</id>
+              <goals>
+	            <goal>jar</goal>
+              </goals>
+             </execution>
+           </executions>
+        </plugin>
+
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-gpg-plugin</artifactId>
+          <executions>
+            <execution>
+              <id>sign-artifacts</id>
+              <phase>verify</phase>
+              <goals>
+                <goal>sign</goal>
+              </goals>
+            </execution>
+          </executions>
+        </plugin>
       </plugins>
     </pluginManagement>
+
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-gpg-plugin</artifactId>
+      </plugin>
+    </plugins>
+
   </build>
 
 </project>

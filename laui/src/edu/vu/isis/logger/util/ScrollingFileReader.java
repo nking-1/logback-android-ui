@@ -233,7 +233,7 @@ public class ScrollingFileReader {
 	/**
 	 * Get the lines in between the top position and the bottom position.
 	 * 
-	 * @return
+	 * @return the lines in between the top position and the bottom position
 	 */
 	public String[] getInnerLines() {
 
