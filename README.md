@@ -36,7 +36,13 @@ Right click on your project and click Properties.  Click on the Android tab on t
 Alternatively, after building LAUI-Lib with Maven, you can put the generated jar file in the libs folder of your project.  Android will automatically include it as a dependency in your builds.
 
 ####For everyone else
-Build this project with Maven and include the generated LAUI-Lib jar file as a dependency in your build scripts.
+Build this project with Maven and include the generated LAUI-Lib jar file as a dependency in your build scripts.  If you are using Maven to build your project, then all you need to do is include the following as a dependency in your project's POM file:
+
+    <dependency>
+        <groupId>edu.vanderbilt.isis</groupId>
+        <artifactId>lauilib</artifactId>
+        <version>1.0.1</version>
+    </dependency>
 
 ###Setting up the ContentProvider
 LAUI-Lib includes a ContentProvider to allow LAUI to display and edit your loggers.  This ContentProvider must be declared in your application's manifest file in order for it to function.
